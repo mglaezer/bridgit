@@ -18,7 +18,7 @@ Yes, Bridg-It is a solved game — Red has a guaranteed winning strategy. But kn
 
 Two winning strategies for Red are known. This implementation uses the one based on Lehman's theorem (1964): partition the board's edges into two spanning trees and use a pairing/repair strategy to maintain them. An earlier and more elegant strategy was discovered by [Oliver Gross](https://en.wikipedia.org/wiki/Bridg-It#Gross's_strategy), who found a simple pairing of crossings such that Red always mirrors Blue's last move onto its paired crossing. Gross's strategy is not implemented here as it is trivial to execute — it requires no search or evaluation, just a lookup table.
 
-The bot plays Blue — the losing side. So while you *should* always win with perfect play, the bot is designed to punish any mistake ruthlessly. One wrong move, and the game might slip away.
+The bot plays Blue — the losing side. So while you *should* always win with perfect play, the bot is designed to punish any mistake ruthlessly. One wrong move, and the game **might** slip away — but Red has a huge advantage by playing first, so not every deviation from the optimal strategy will cost you the game.
 
 ## How to Play
 
