@@ -123,19 +123,19 @@ Both paths want crossing (3,3) — claiming it helps you and blocks your opponen
 
 All unclaimed crossings are candidate moves, evaluated through negamax alpha-beta search with iterative deepening:
 
-- Search starts at depth 2 and increases until 60% of the 1200ms time budget is used
+- Search starts at depth 2 and increases until 60% of the time budget is used
 - At each node, moves are ordered by: transposition table best move → killer moves → BFS distance (at shallow plies) → root-computed priority ranking + history heuristic
 - Alpha-beta pruning eliminates branches that can't improve on the best move found so far
 - The top 15 moves are evaluated at each inner node; the rest are pruned
 - Leaf positions are evaluated: `−bd × weight + rdSum × 100 + rdMin × 500 − fragility_penalty`
 
-The search reaches depth 7-9 in the opening/midgame and depth 9-12 in the endgame, evaluating ~1M positions per move in ~683ms on average. A 32K-entry transposition table caches position evaluations across iterations. The JavaScript engine falls back to beam-search minimax: 20 × 4 × 6 × 4 = 1,920 leaf evaluations per move (~46ms).
+At the highest strength, the search reaches depth 7-9 in the opening/midgame and depth 9-12 in the endgame. A 32K-entry transposition table caches position evaluations across iterations. The JavaScript engine falls back to beam-search minimax: 20 × 4 × 6 × 4 = 1,920 leaf evaluations per move (~46ms).
 
 Red responses are ordered by a balanced score (`-rd×200 + bd×100`) rather than pure offense. This models realistic human opponents who consider both advancing their own connection and blocking Blue — not just distance-optimal play.
 
 ### Time Constraints
 
-The entire bot runs client-side in your browser — there's no server. The WASM alpha-beta engine uses a **1.2-second time budget** with iterative deepening, evaluating ~1M positions per move. The JavaScript fallback uses beam-search minimax, evaluating 1,920 positions in ~46ms. Both stay responsive on mobile.
+The entire bot runs client-side in your browser — there's no server. The WASM alpha-beta engine uses iterative deepening with a configurable time budget controlled by the **Strength** dropdown (50ms Beginner through 3000ms Expert). The JavaScript fallback uses beam-search minimax, evaluating 1,920 positions in ~46ms. Both stay responsive on mobile.
 
 ### The Bot's Design Philosophy
 
@@ -156,16 +156,6 @@ Three debug overlays let you peek under the hood of Red's game-theoretic strateg
 The **L** and **R** overlays visualize the two halves of Red's partition. At the start, L is a spanning tree (one connected component) and R is a 2-component forest. Red's first move bridges R's gap, making both L and R spanning trees. From that point, the pairing strategy kicks in: if Blue cuts an edge in L, Red repairs L using an edge from R (and vice versa). The overlays let you see this structure evolve as the game progresses.
 
 The **W** overlay computes optimal moves using the `getOptimalRedMoves` function, which implements the repair half of the pairing strategy. It checks which of Red's two trees (L or R) was broken by Blue's last move, then finds all edges from the *other* tree that would reconnect the broken one. These "bridging edges" are highlighted in green. If you always play a green move, you maintain two spanning trees and are guaranteed to win — no matter what Blue does.
-
-## Win Indicator
-
-The scoreboard bolds the score of whichever player has a guaranteed win, based on exact graph-theoretic conditions:
-
-- **Red guaranteed**: Red's exchange strategy is viable (both L/R graphs have ≤2 components with at least one spanning tree), OR Blue's full available graph is disconnected.
-- **Blue guaranteed**: Red's full available graph is disconnected — Red cannot connect top to bottom even claiming all remaining crossings.
-- **Uncertain**: Neither condition holds. Both scores shown at normal weight.
-
-At game start, Red is always guaranteed (the staircase partition gives a viable exchange strategy). The indicator updates after every move.
 
 ## What We Tried (And What Didn't Work)
 
@@ -472,7 +462,7 @@ The beam search's fundamental limitation: it tracks a fixed number of candidates
 
 **Architecture:**
 - **Negamax with alpha-beta cutoffs** — standard recursive search. First move gets full window (Principal Variation Search), rest get null-window + re-search on fail
-- **Iterative deepening** — search depth 2, 3, 4... until 60% of 1200ms budget used. The best move from each completed iteration is used
+- **Iterative deepening** — search depth 2, 3, 4... until 60% of the time budget is used. The best move from each completed iteration is used
 - **Transposition table (TT)** — 32K entries × 16 bytes caching position scores, best moves, depth, and bound type. Zobrist hashing for O(1) incremental updates
 - **Move ordering** — TT best move (from previous iteration) → killer moves (2 per ply, moves that caused cutoffs at sibling nodes) → BFS distance ordering at plies 1-2 → root-computed priority ranking + history heuristic at deeper plies
 - **Forward pruning** — top 15 moves kept at each inner node (except TT/killer moves which always pass)
@@ -500,7 +490,7 @@ The beam search's fundamental limitation: it tracks a fixed number of candidates
 | Avg time/move | 1195ms | **683ms (1.75× faster)** |
 | Games where only this one won | 1 | 2 |
 
-Alpha-beta matches beam search in strength (+2pp, within noise) while being 1.75× faster. They agree on 94% of games (47/50). The production bot now uses alpha-beta with iterative deepening and a 1200ms time budget.
+Alpha-beta matches beam search in strength (+2pp, within noise) while being 1.75× faster. They agree on 94% of games (47/50). The production bot now uses alpha-beta with iterative deepening and a configurable time budget (50ms–3000ms via the Strength dropdown).
 
 ### Loss Analysis Against `weakRed(0.9)`
 
@@ -520,7 +510,7 @@ A second round of human playtesting (6 games, 3-3 split) revealed two new failur
 
 ### Diverse Benchmark: Automated Human-Like Opponents
 
-To catch this class of bug without human playtesting, we built a diverse benchmark with opponents that don't use Shannon pairing:
+To validate against realistic play styles, several simulated opponents were built that don't use Shannon pairing:
 
 | Opponent | Style | Win Rate |
 |----------|-------|----------|
@@ -532,13 +522,13 @@ To catch this class of bug without human playtesting, we built a diverse benchma
 
 The bot beats all human-like opponents. Only the proven winning strategy (Shannon pairing) consistently challenges it — and that's a mathematical certainty, not a bot weakness.
 
-### Move-Level Analysis: Finding Bot Mistakes Without Humans
+### Move-Level Analysis
 
-The diverse Red opponents also power a move-level analysis tool. Given a recorded game log, it identifies exactly which Blue moves were mistakes:
+Given a recorded game log, move-level analysis identifies exactly which Blue moves were mistakes by replaying each decision point and simulating the rest of the game with human-like opponents:
 
 1. Replay the recorded game up to each Blue turn
 2. Try the bot's actual move and the top 5 alternatives (by Blue distance)
-3. Play out the rest of the game 20 times — the bot plays Blue, a randomly chosen human-like Red (focusedRed, localRed, or forkRed) plays Red
+3. Play out the rest of the game 20 times against randomly chosen human-like Red opponents
 4. Report the win rate for each move
 
 ```
@@ -546,8 +536,6 @@ Turn 7: played 7,3 (win 70%) — best: 5,11 (win 100%) *** MISTAKE
 Turn 8: played 7,7 (win 75%) — best: 7,7 (win 75%)
 Turn 9: played 7,9 (win 65%) — best: 7,1 (win 100%) *** MISTAKE
 ```
-
-This replaces the earlier naive analysis that held Red's moves fixed after a divergence (which is invalid — Red would respond differently to a different Blue move). By simulating the rest of the game with human-like opponents, we get a realistic estimate of each move's value.
 
 **Key finding:** In early losses, the bot ignored moves with **100% win rate** against human-like Red for 8+ consecutive turns. The root cause: pairing bonuses (up to +5000) pushed all bd-advancing moves below rank 20 in the pre-filter, so minimax never evaluated them. The bd-advancer injection (Experiment #46) fixes this. Later losses revealed the minimax leaf couldn't detect edge cascades or penalize fragile positions — fixed by adding rdMin and a fragility penalty (Experiment #47). All 10 recorded human losses now flip.
 
