@@ -1033,6 +1033,7 @@ function computerMove(game) {
 
   if (wasmBot) return wasmComputerMove(game);
   if (blueEvalWeights) return nnComputerMove(game);
+  console.log('wasm not loaded');
 
   var unclaimed = getUnclaimed(game);
   if (unclaimed.length === 0) return null;
@@ -1328,7 +1329,8 @@ if (typeof document !== 'undefined' && typeof WebAssembly !== 'undefined') {
         var sel = document.getElementById('strengthSelect');
         mod._setTimeLimit(sel ? parseInt(sel.value) : 200);
         wasmBot = mod;
-      }).catch(function() {});
+        console.log('wasm loaded');
+      }).catch(function(e) { console.log('wasm not loaded'); });
     }
   };
   document.head.appendChild(script);
