@@ -1023,10 +1023,11 @@ function wasmComputerMove(game) {
   wasmBot.HEAPU8.set(blueRArr, wasmBot._blueRPtr);
   var t0 = performance.now();
   var idx = wasmBot._computerMove(wasmBot._boardPtr, wasmBot._blueLPtr, wasmBot._blueRPtr);
-  var elapsed = (performance.now() - t0).toFixed(0);
+  var jsTime = (performance.now() - t0).toFixed(0);
   var depth = wasmBot.cwrap('wasm_get_last_depth', 'number', [])();
   var nodes = wasmBot.cwrap('wasm_get_last_nodes', 'number', [])();
-  console.log('wasm move: depth=' + depth + ' nodes=' + nodes + ' time=' + elapsed + 'ms');
+  var wasmTime = wasmBot.cwrap('wasm_get_last_elapsed', 'number', [])();
+  console.log('wasm move: depth=' + depth + ' nodes=' + nodes + ' jsTime=' + jsTime + 'ms wasmTime=' + wasmTime + 'ms');
   if (idx < 0) return null;
   return makeMove(game, wasmCrossingKeys[idx]);
 }

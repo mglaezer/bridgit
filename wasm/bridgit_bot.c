@@ -653,6 +653,7 @@ static void root_search(int depth, int asp_alpha, int asp_beta) {
 
 static int g_last_depth;
 static int g_last_nodes;
+static double g_last_elapsed;
 
 static int iterative_deepening(void) {
   g_search_start = emscripten_get_now();
@@ -682,6 +683,7 @@ static int iterative_deepening(void) {
     if (elapsed > g_time_limit * 0.6) break;
   }
   g_last_nodes = g_nodes;
+  g_last_elapsed = emscripten_get_now() - g_search_start;
 
   return best_move;
 }
@@ -864,6 +866,9 @@ int wasm_get_last_depth(void) { return g_last_depth; }
 
 __attribute__((used))
 int wasm_get_last_nodes(void) { return g_last_nodes; }
+
+__attribute__((used))
+int wasm_get_last_elapsed(void) { return (int)g_last_elapsed; }
 
 __attribute__((used))
 int wasm_blue_distance(const uint8_t *board) {
