@@ -1021,13 +1021,7 @@ function wasmComputerMove(game) {
   wasmBot.HEAPU8.set(boardArr, wasmBot._boardPtr);
   wasmBot.HEAPU8.set(blueLArr, wasmBot._blueLPtr);
   wasmBot.HEAPU8.set(blueRArr, wasmBot._blueRPtr);
-  var t0 = performance.now();
   var idx = wasmBot._computerMove(wasmBot._boardPtr, wasmBot._blueLPtr, wasmBot._blueRPtr);
-  var jsTime = (performance.now() - t0).toFixed(0);
-  var depth = wasmBot.cwrap('wasm_get_last_depth', 'number', [])();
-  var nodes = wasmBot.cwrap('wasm_get_last_nodes', 'number', [])();
-  var wasmTime = wasmBot.cwrap('wasm_get_last_elapsed', 'number', [])();
-  console.log('wasm move: depth=' + depth + ' nodes=' + nodes + ' jsTime=' + jsTime + 'ms wasmTime=' + wasmTime + 'ms');
   if (idx < 0) return null;
   return makeMove(game, wasmCrossingKeys[idx]);
 }
@@ -1317,6 +1311,23 @@ if (typeof module !== 'undefined') {
 
 // --- WASM loader ---
 
+var wasmStrengthPresets = [
+  null,
+  { depth: 2, base: [5, 2, 3, 2], extra: [2, 2] },
+  { depth: 4, base: [10, 4, 5, 4], extra: [4, 3] },
+  { depth: 4, base: [20, 6, 8, 6], extra: [6, 4] },
+  { depth: 6, base: [40, 8, 10, 8], extra: [8, 6] },
+  { depth: 6, base: [50, 10, 12, 10], extra: [10, 8] }
+];
+
+function applyWasmStrength(level) {
+  if (!wasmBot || !wasmBot._setDepth) return;
+  var p = wasmStrengthPresets[level] || wasmStrengthPresets[4];
+  wasmBot._setDepth(p.depth);
+  wasmBot._setBaseWidths(p.base[0], p.base[1], p.base[2], p.base[3]);
+  wasmBot._setWidths(p.extra[0], p.extra[1]);
+}
+
 if (typeof document !== 'undefined' && typeof WebAssembly !== 'undefined') {
   var script = document.createElement('script');
   script.src = 'wasm/bridgit_bot.js';
@@ -1330,11 +1341,12 @@ if (typeof document !== 'undefined' && typeof WebAssembly !== 'undefined') {
         mod._blueLPtr = blueLPtr;
         mod._blueRPtr = blueRPtr;
         mod._computerMove = mod.cwrap('wasm_computer_move', 'number', ['number', 'number', 'number']);
-        mod.cwrap('wasm_init', null, [])();
-        mod._setTimeLimit = mod.cwrap('wasm_set_time_limit', null, ['number']);
-        var sel = document.getElementById('strengthSelect');
-        mod._setTimeLimit(sel ? parseInt(sel.value) : 200);
+        mod._setDepth = mod.cwrap('wasm_set_depth', null, ['number']);
+        mod._setBaseWidths = mod.cwrap('wasm_set_base_widths', null, ['number', 'number', 'number', 'number']);
+        mod._setWidths = mod.cwrap('wasm_set_widths', null, ['number', 'number']);
         wasmBot = mod;
+        var sel = document.getElementById('strengthSelect');
+        applyWasmStrength(sel ? parseInt(sel.value) : 4);
         console.log('wasm loaded');
       }).catch(function(e) { console.log('wasm not loaded'); });
     }
@@ -1384,7 +1396,6 @@ function startGame() {
   inputDisabled = false;
   blinkingKey = null;
   blinkAnimating = false;
-  if (wasmBot) wasmBot.cwrap('wasm_init', null, [])();
   draw();
 }
 
@@ -1700,9 +1711,7 @@ newGameBtn.addEventListener('click', function() {
 });
 
 document.getElementById('strengthSelect').addEventListener('change', function() {
-  if (wasmBot && wasmBot._setTimeLimit) {
-    wasmBot._setTimeLimit(parseInt(this.value));
-  }
+  applyWasmStrength(parseInt(this.value));
 });
 
 window.downloadGameLog = function() {

@@ -1,6 +1,6 @@
 # Bridg-It
 
-A browser-based implementation of [Bridg-It](https://en.wikipedia.org/wiki/Bridg-It), a classic connection board game from the 1960s, featuring a bot opponent powered by game-theoretic strategy and alpha-beta search.
+A browser-based implementation of [Bridg-It](https://en.wikipedia.org/wiki/Bridg-It), a classic connection board game from the 1960s, featuring a bot opponent powered by game-theoretic strategy and beam-search minimax.
 
 <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/BridgeIt2.svg/500px-BridgeIt2.svg.png" alt="Bridg-It game board" width="300">
 
@@ -119,46 +119,33 @@ Red's path (top → bottom), rd = 2:
 
 Both paths want crossing (3,3) — claiming it helps you and blocks your opponent.
 
-**3. Alpha-Beta Search**
+**3. Beam-Search Minimax**
 
-All unclaimed crossings are candidate moves, evaluated through negamax alpha-beta search with iterative deepening:
+All unclaimed crossings are candidate moves, evaluated through a fixed-depth beam-search minimax. At the highest strength (6-ply, 40×8×10×8):
 
-- Search starts at depth 2 and increases until 60% of the time budget is used
-- At each node, moves are ordered by: transposition table best move → killer moves → BFS distance (at shallow plies) → root-computed priority ranking + history heuristic
-- Alpha-beta pruning eliminates branches that can't improve on the best move found so far
-- The top 15 moves are evaluated at each inner node; the rest are pruned
+- The top 40 Blue candidates are scored by BFS distance + pairing bonuses
+- For each, the top 8 Red responses are tried (ordered by balanced score)
+- Blue picks 10 follow-up moves, Red responds with 8 more — evaluating 25,600 leaves total
 - Leaf positions are evaluated: `−bd × weight + rdSum × 100 + rdMin × 500 − fragility_penalty`
-
-At the highest strength, the search reaches depth 7-9 in the opening/midgame and depth 9-12 in the endgame. A 32K-entry transposition table caches position evaluations across iterations. The JavaScript engine falls back to beam-search minimax: 20 × 4 × 6 × 4 = 1,920 leaf evaluations per move (~46ms).
+- After minimax, a `bdBias` correction (`finalScore = minimax − bd × 300`) ensures the bot prefers moves that advance toward winning
 
 Red responses are ordered by a balanced score (`-rd×200 + bd×100`) rather than pure offense. This models realistic human opponents who consider both advancing their own connection and blocking Blue — not just distance-optimal play.
 
 ### Time Constraints
 
-The entire bot runs client-side in your browser — there's no server. The WASM alpha-beta engine uses iterative deepening with a configurable time budget controlled by the **Strength** dropdown (50ms Beginner through 3000ms Expert). The JavaScript fallback uses beam-search minimax, evaluating 1,920 positions in ~46ms. Both stay responsive on mobile.
+The entire bot runs client-side in your browser — there's no server. The WASM beam-search engine runs 18× faster than the JS fallback, enabling much wider search. The **Strength** dropdown controls search depth and beam width (Beginner through Expert). The JavaScript fallback uses narrower beam widths: 20 × 4 × 6 × 4 = 1,920 leaf evaluations per move (~46ms). Both stay responsive on mobile.
 
 ### The Bot's Design Philosophy
 
-Blue is *theoretically lost* — no sequence of Blue moves beats perfect Red. So the bot isn't trying to play "optimally" in the game-theoretic sense. Instead, it's an adversarial optimizer: every move is chosen to maximize the chance that a *human* Red player makes a mistake. The pairing bonuses ensure structural soundness (Blue's partition stays healthy), the distance formula creates offensive pressure, and the alpha-beta search anticipates Red's strongest responses.
+Blue is *theoretically lost* — no sequence of Blue moves beats perfect Red. So the bot isn't trying to play "optimally" in the game-theoretic sense. Instead, it's an adversarial optimizer: every move is chosen to maximize the chance that a *human* Red player makes a mistake. The pairing bonuses ensure structural soundness (Blue's partition stays healthy), the distance formula creates offensive pressure, and the beam-search minimax anticipates Red's strongest responses.
 
 The bot is tuned against realistic human-like opponents (a balanced heuristic with noise), not against the mathematically optimal strategy. This matters because real humans consider both offense and defense, make plausible-looking mistakes rather than random ones, and don't know the winning strategy. The bot's Red model reflects this: it anticipates balanced human play, not pure distance-optimal or random moves.
 
 ## WASM Search Engine
 
-The search engine is written in C (~870 lines) and compiled to WebAssembly via Emscripten. It includes 0-1 BFS distance computation, union-find, partition management, move scoring with repair/gap-bridge bonuses, and alpha-beta search. The C code uses precomputed topology tables, static arrays with no heap allocation, and a circular-buffer deque for BFS. The compiled output is a 23KB `.wasm` file plus a 12KB JS loader — loaded automatically in the browser with a transparent fallback to the JS engine if WebAssembly is unavailable.
+The search engine is written in C and compiled to WebAssembly via Emscripten. It implements the same beam-search minimax as the JS engine but runs **18× faster**, enabling a much wider search (25,600 leaves vs 1,920 at the highest setting). The C code uses precomputed topology tables, static arrays with no heap allocation, and a circular-buffer deque for 0-1 BFS. The compiled output is a ~23KB `.wasm` file plus a ~12KB JS loader — loaded automatically in the browser with a transparent fallback to the JS engine if WebAssembly is unavailable.
 
-The initial WASM engine used the same beam-search architecture as the JS engine and was **18× faster** — enabling a 13× wider search (25,600 leaves vs 1,920). However, beam search has a fundamental limitation: it tracks a fixed number of candidates at each ply, so if the best move isn't in the top-N, it's invisible. The engine was replaced with alpha-beta pruning, which considers all moves but intelligently prunes branches that are provably worse.
-
-**Head-to-head result (50 paired games, same seeds):**
-
-| Metric | Beam Search | Alpha-Beta |
-|--------|------------|------------|
-| Win rate | 37/50 (74%) | **38/50 (76%)** |
-| Avg time/move | 1195ms | **683ms (1.75× faster)** |
-
-Alpha-beta matches beam search in strength while being 1.75× faster. They agree on 94% of games. 14 configurations were tested during alpha-beta tuning — the key finding was that BFS distance ordering at plies 1-2 (where the board hasn't changed much from the root) combined with forward pruning to the top 15 moves is the sweet spot.
-
-Correctness was verified against the JS engine on 11,476 random board positions — WASM and JS produce identical BFS distances and Red distance info on every one.
+Five difficulty levels control the search width and depth: Beginner (2-ply, narrow beam), Casual (4-ply), Medium (4-ply, wider), Hard (6-ply, 40×8×10×8), and Expert (6-ply, 50×10×12×10). Correctness was verified against the JS engine on 11,476 random board positions — WASM and JS produce identical BFS distances and Red distance info on every one.
 
 ## Overlays
 
@@ -253,6 +240,7 @@ The bot beats all human-like opponents. Only the proven winning strategy (Shanno
 | **Expectimax** (3 variants) | **-1.5 to -5pp** | Averaging strong Red moves just weakens Blue's defenses |
 | **Depth-3 search** | **-8.5pp**, 5x slower | Narrow inner widths miss critical candidates |
 | **Contested crossing bonus** | **-3pp** | The linear formula already captures dual-purpose signals |
+| **Alpha-beta WASM engine** | **-6pp** | Searched deeper (depth 8-9) in less time, but bdBias and BD-advancer injection don't translate well — post-search score adjustments interact poorly with pruning. Beam search retained |
 | **Endgame solver** (alpha-beta) | 0pp to **-1.7pp** | Too pessimistic against imperfect opponents; force-win variant never triggers |
 | **Monte Carlo rollouts** | **-4.8pp** | Random play is too noisy to produce useful signal |
 | **Blended minimax + pre-filter** | **-4.5pp** | Pre-filter is a coarse heuristic; blending it overrides tactical intelligence |
