@@ -59,15 +59,17 @@ For N=6: 42 Red dots, 42 Blue dots, 61 playable crossings (`N² + (N−1)² = 36
 
 Bridg-It is a special case of the [Shannon switching game](https://en.wikipedia.org/wiki/Shannon_switching_game), a class of combinatorial games played on graphs. The game was solved in 1964 by Alfred Lehman using matroid theory.
 
-**Lehman's Theorem** states that the second player (the "connector") has a winning strategy if and only if the underlying graph contains two edge-disjoint spanning trees. In Bridg-It, this translates to a concrete condition on the board's dual graph structure.
+**Lehman's Theorem** states that the second player (the "connector") has a winning strategy **if and only if** the underlying graph contains two edge-disjoint spanning trees. The "if and only if" is important: when the condition is met, the connector can always win by maintaining and repairing those trees. When it is *not* met, the connector has no guaranteed winning strategy — the first player can force a win.
 
 The board has two overlapping graphs — one for Red, one for Blue. Each player's graph has 42 vertices (their dots) connected by 61 playable crossings plus 10 permanent boundary edges. When you claim a crossing, it becomes a permanent edge in your graph and is permanently removed from your opponent's.
 
+In Bridg-It, Blue's edges can be partitioned into L (a spanning tree, 31 edges) and R (a 2-component forest, 30 edges). R is *not* a spanning tree — it falls one edge short. Since Blue's graph lacks two edge-disjoint spanning trees, Lehman's condition is not met, and Blue has no guaranteed win. This means the bot cannot simply follow the tree-repair strategy and expect to always win. The repair approach works most of the time — when Red cuts an L-edge, Blue swaps in an R-edge to fix it — but R has a structural gap (its two disconnected components), and a skilled Red player can target that gap to break through.
+
 ### Why Red Wins
 
-For Blue to have a guaranteed win, Blue's graph would need to support two edge-disjoint spanning trees. This requires 2 × 31 = 62 crossing edges, but only 61 crossings exist. Blue is always **exactly one edge short** — and this holds for any board size, not just 6×6. This single-edge deficit is the fundamental asymmetry that gives the first player the advantage.
+This one-edge deficit (61 crossings vs. the 62 needed for two spanning trees) holds for any board size, not just 6×6. It is the fundamental asymmetry that gives the first player the advantage.
 
-Red's winning strategy works by maintaining a *partition* of crossings into two sets (L and R). After Red's first move bridges R's gap, both L and R become spanning trees. From that point on, Red uses a pairing strategy: whichever tree Blue breaks, Red repairs from the other. This is unbeatable.
+Red exploits this by maintaining its *own* partition of crossings into two sets (L and R). After Red's first move bridges R's gap, both L and R become spanning trees. From that point on, Red uses a pairing strategy: whichever tree Blue breaks, Red repairs from the other. This is unbeatable.
 
 ### The Bot's Strategy
 
