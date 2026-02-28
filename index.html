@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bridg-It</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="container">
+    <h1>BRIDG-IT</h1>
+    <div id="score">
+      <div class="score-side score-human">
+        <span class="score-label">You</span>
+        <span class="score-value" id="humanScore">0</span>
+      </div>
+      <span class="score-divider">:</span>
+      <div class="score-side score-bot">
+        <span class="score-value" id="botScore">0</span>
+        <span class="score-label">Bot</span>
+      </div>
+    </div>
+    <div id="strength-row">
+      <label for="strengthSelect">Strength</label>
+      <select id="strengthSelect">
+        <option value="50">Beginner</option>
+        <option value="200" selected>Casual</option>
+        <option value="500">Medium</option>
+        <option value="1200">Hard</option>
+        <option value="3000">Expert</option>
+      </select>
+    </div>
+    <canvas id="board"></canvas>
+    <div id="controls">
+      <button id="newGameBtn">New Game</button>
+    </div>
+    <p id="tagline">Connect <span style="color:#e74c3c;font-weight:700">red</span> dots top to bottom. Tap edges to claim them.</p>
+    <a id="about-link" href="https://github.com/mglaezer/bridgit">Rules & Description</a>
+    <div id="overlayBtns">
+      <button class="overlay-btn" id="btnL">L</button>
+      <button class="overlay-btn" id="btnR">R</button>
+      <button class="overlay-btn" id="btnW">W</button>
+    </div>
+  </div>
+  <script src="game.js"></script>
+</body>
+</html>
