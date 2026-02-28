@@ -16,9 +16,9 @@ On each turn, you claim one crossing — a gap between two of your dots. Claimin
 
 Yes, Bridg-It is a solved game — Red has a guaranteed winning strategy. But knowing a winning strategy exists and actually executing it over the board are very different things. The purpose of this project is to give you a fun, challenging opponent to practice against. Can you find and follow the winning strategy under pressure, or will the bot punish your mistakes?
 
-Two winning strategies for Red are known. This implementation uses the one based on Lehman's theorem (1964): partition the board's edges into two spanning trees and use a pairing/repair strategy to maintain them. An earlier and more elegant strategy was discovered by [Oliver Gross](https://en.wikipedia.org/wiki/Bridg-It#Gross's_strategy), who found a simple pairing of crossings such that Red always mirrors Blue's last move onto its paired crossing. Gross's strategy is not implemented here as it is trivial to execute — it requires no search or evaluation, just a lookup table.
+Two winning strategies for Red (your side) are known. The first, by [Oliver Gross](https://en.wikipedia.org/wiki/Bridg-It#Gross's_strategy), is a simple pairing: Red always mirrors Blue's move onto its paired crossing. The second, based on Lehman's theorem (1964), uses spanning tree partitions and a repair strategy. Both guarantee a win for Red with perfect play.
 
-The bot plays Blue — the losing side. So while you *should* always win with perfect play, the bot is designed to punish any mistake ruthlessly. One wrong move, and the game **might** slip away — but Red has a huge advantage by playing first, so not every deviation from the optimal strategy will cost you the game.
+The bot plays Blue — the losing side. There is no winning theorem for Blue to follow; the math proves Blue loses against perfect Red. Instead, the bot plays much like a strong human would: evaluating board positions, searching ahead through thousands of move sequences, and punishing your mistakes. One wrong move, and the game **might** slip away — but Red has a huge advantage by playing first, so not every deviation from the optimal strategy will cost you the game. The game theory below explains *why* Blue loses and informs some heuristics, but the bot's core is a practical search engine, not a theoretical formula.
 
 ## How to Play
 
@@ -55,7 +55,9 @@ For N=6: 42 Red dots, 42 Blue dots, 61 playable crossings (`N² + (N−1)² = 36
 
 ## The Algorithm
 
-### The Theory: Shannon Switching Games
+The bot doesn't follow any theorem or formula — it uses beam-search minimax, a practical search engine that evaluates thousands of board positions per move. The game theory below is background that explains why the game works the way it does; the bot borrows one idea from it (repair detection) as a heuristic bonus, but all decisions come from search.
+
+### Background: Shannon Switching Games
 
 Bridg-It is a special case of the [Shannon switching game](https://en.wikipedia.org/wiki/Shannon_switching_game), a class of combinatorial games played on graphs. The game was solved in 1964 by Alfred Lehman using matroid theory.
 
@@ -73,7 +75,7 @@ Red exploits this by maintaining its *own* partition of crossings into two sets 
 
 ### The Bot's Strategy
 
-Since Blue is theoretically lost, the bot can't simply play "optimally" — there is no winning strategy for Blue against perfect Red. Instead, the bot plays a hybrid strategy designed to exploit human mistakes:
+Since no winning strategy exists for Blue, the bot can't follow a theoretical formula. Instead, it plays like a strong human — combining positional evaluation with look-ahead search to exploit mistakes:
 
 **1. Pairing Repair Detection**
 
