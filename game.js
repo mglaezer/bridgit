@@ -1383,6 +1383,7 @@ function startGame() {
   inputDisabled = false;
   blinkingKey = null;
   blinkAnimating = false;
+  if (wasmBot) wasmBot.cwrap('wasm_init', null, [])();
   draw();
 }
 
