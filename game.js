@@ -1313,16 +1313,16 @@ if (typeof module !== 'undefined') {
 
 var wasmStrengthPresets = [
   null,
-  { depth: 2, base: [5, 2, 3, 2], extra: [2, 2] },
-  { depth: 4, base: [10, 4, 5, 4], extra: [4, 3] },
-  { depth: 4, base: [20, 6, 8, 6], extra: [6, 4] },
-  { depth: 6, base: [40, 8, 10, 8], extra: [8, 6] },
-  { depth: 6, base: [50, 10, 12, 10], extra: [10, 8] }
+  null,
+  { depth: 4, base: [61, 10, 10, 6], extra: [4, 3] },
+  { depth: 6, base: [61, 14, 14, 8], extra: [6, 4] },
+  null,
+  { depth: 6, base: [61, 20, 20, 10], extra: [8, 6] }
 ];
 
 function applyWasmStrength(level) {
   if (!wasmBot || !wasmBot._setDepth) return;
-  var p = wasmStrengthPresets[level] || wasmStrengthPresets[4];
+  var p = wasmStrengthPresets[level] || wasmStrengthPresets[3];
   wasmBot._setDepth(p.depth);
   wasmBot._setBaseWidths(p.base[0], p.base[1], p.base[2], p.base[3]);
   wasmBot._setWidths(p.extra[0], p.extra[1]);
@@ -1344,11 +1344,16 @@ if (typeof document !== 'undefined' && typeof WebAssembly !== 'undefined') {
         mod._setDepth = mod.cwrap('wasm_set_depth', null, ['number']);
         mod._setBaseWidths = mod.cwrap('wasm_set_base_widths', null, ['number', 'number', 'number', 'number']);
         mod._setWidths = mod.cwrap('wasm_set_widths', null, ['number', 'number']);
+        mod.cwrap('wasm_set_resistance', null, ['number'])(1);
         wasmBot = mod;
         var sel = document.getElementById('strengthSelect');
-        applyWasmStrength(sel ? parseInt(sel.value) : 4);
+        applyWasmStrength(sel ? parseInt(sel.value) : 3);
         console.log('wasm loaded');
-      }).catch(function(e) { console.log('wasm not loaded'); });
+      }).catch(function(e) {
+        console.log('wasm not loaded');
+        var el = document.getElementById('wasm-fail');
+        if (el) el.style.display = '';
+      });
     }
   };
   document.head.appendChild(script);

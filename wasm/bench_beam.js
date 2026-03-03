@@ -5,15 +5,6 @@ var CROSSING_KEYS = [];
 for (var i = 0; i < CROSSINGS.length; i++)
   CROSSING_KEYS.push(g.k(CROSSINGS[i][0], CROSSINGS[i][1]));
 
-function mulberry32(seed) {
-  return function() {
-    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
-    var t = Math.imul(seed ^ seed >>> 15, 1 | seed);
-    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-    return ((t ^ t >>> 14) >>> 0) / 4294967296;
-  };
-}
-
 function boardToArray(board) {
   var arr = new Uint8Array(61);
   for (var i = 0; i < 61; i++) {
@@ -31,7 +22,7 @@ function partitionToArray(partSet) {
   return arr;
 }
 
-function makeWasmMover(mod, boardPtr, blueLPtr, blueRPtr, computerMove) {
+function makeWasmBlueMover(mod, boardPtr, blueLPtr, blueRPtr, computerMove) {
   return function(game) {
     var part = g.recomputeBluePartition(6, game.board);
     game.blueL = part.L;
@@ -53,6 +44,32 @@ function makeWasmMover(mod, boardPtr, blueLPtr, blueRPtr, computerMove) {
   };
 }
 
+function makeWasmRedMover(mod, boardPtr, redLPtr, redRPtr, redMoveFn) {
+  return function(game) {
+    var part = g.recomputeRedPartition(6, game.board);
+    mod.HEAPU8.set(boardToArray(game.board), boardPtr);
+    mod.HEAPU8.set(partitionToArray(part.L), redLPtr);
+    mod.HEAPU8.set(partitionToArray(part.R), redRPtr);
+    var idx = redMoveFn(boardPtr, redLPtr, redRPtr);
+    if (idx < 0) return null;
+    var key = CROSSING_KEYS[idx];
+    var parts = key.split(',');
+    g.humanMove(game, parseInt(parts[0]), parseInt(parts[1]));
+    return key;
+  };
+}
+
+function playGame(game, blueMove, redMove) {
+  for (var turn = 0; turn < 122; turn++) {
+    if (game.gameOver) break;
+    if (game.turn === 'red') {
+      redMove(game);
+    } else {
+      blueMove(game);
+    }
+  }
+}
+
 async function main() {
   var NewBot = require('./bridgit_bot_beam.js');
   var newMod = await NewBot();
@@ -60,104 +77,88 @@ async function main() {
   var newBlueLPtr = newMod._malloc(61);
   var newBlueRPtr = newMod._malloc(61);
   var newComputerMove = newMod.cwrap('wasm_computer_move', 'number', ['number', 'number', 'number']);
+  newMod.cwrap('wasm_set_resistance', null, ['number'])(1);
   newMod.cwrap('wasm_set_depth', null, ['number'])(6);
-  newMod.cwrap('wasm_set_base_widths', null, ['number', 'number', 'number', 'number'])(40, 8, 10, 8);
+  newMod.cwrap('wasm_set_base_widths', null, ['number', 'number', 'number', 'number'])(61, 20, 20, 10);
   newMod.cwrap('wasm_set_widths', null, ['number', 'number'])(8, 6);
-  var newMove = makeWasmMover(newMod, newBoardPtr, newBlueLPtr, newBlueRPtr, newComputerMove);
+  var newBlueMove = makeWasmBlueMover(newMod, newBoardPtr, newBlueLPtr, newBlueRPtr, newComputerMove);
 
-  var OldBot = require('./old_bridgit_bot.js');
+  var OldBot = require('./baseline_beam.js');
   var oldMod = await OldBot();
   var oldBoardPtr = oldMod._malloc(61);
   var oldBlueLPtr = oldMod._malloc(61);
   var oldBlueRPtr = oldMod._malloc(61);
   var oldComputerMove = oldMod.cwrap('wasm_computer_move', 'number', ['number', 'number', 'number']);
-  oldMod.cwrap('wasm_set_depth', null, ['number'])(6);
-  oldMod.cwrap('wasm_set_base_widths', null, ['number', 'number', 'number', 'number'])(40, 8, 10, 8);
+  oldMod.cwrap('wasm_set_depth', null, ['number'])(8);
+  oldMod.cwrap('wasm_set_base_widths', null, ['number', 'number', 'number', 'number'])(61, 8, 10, 8);
   oldMod.cwrap('wasm_set_widths', null, ['number', 'number'])(8, 6);
-  var oldMove = makeWasmMover(oldMod, oldBoardPtr, oldBlueLPtr, oldBlueRPtr, oldComputerMove);
+  var oldBlueMove = makeWasmBlueMover(oldMod, oldBoardPtr, oldBlueLPtr, oldBlueRPtr, oldComputerMove);
 
-  var NUM_GAMES = parseInt(process.argv[2]) || 200;
+  var redBoardPtr = oldMod._malloc(61);
+  var redLPtr = oldMod._malloc(61);
+  var redRPtr = oldMod._malloc(61);
+  var redMoveFn = oldMod.cwrap('wasm_computer_move_red', 'number', ['number', 'number', 'number']);
+  var setRedVariant = oldMod.cwrap('wasm_set_red_variant', null, ['number']);
+  var redMove = makeWasmRedMover(oldMod, redBoardPtr, redLPtr, redRPtr, redMoveFn);
 
-  console.log('Paired: New beam C vs Old beam WASM (' + NUM_GAMES + ' games vs weakRed-0.9, 6-ply 40x8x10x8+8x6)');
+  var NUM_VARIANTS = 2;
+  var NUM_GAMES = 61 * NUM_VARIANTS;
+
+  console.log('Generational benchmark (' + NUM_GAMES + ' games: 61 openings x ' + NUM_VARIANTS + ' Red variants)');
+  console.log('Red = previous gen beam search, variant shifts tie-breaking among near-equal moves');
 
   var oldWins = 0, newWins = 0, both = 0, neither = 0, oldOnly = 0, newOnly = 0;
   var newTotalTime = 0, newTotalMoves = 0;
   var oldTotalTime = 0, oldTotalMoves = 0;
+  var gi = 0;
 
-  for (var gi = 0; gi < NUM_GAMES; gi++) {
-    var rng1 = mulberry32(gi + 1);
-    var rng2 = mulberry32(gi + 1);
+  for (var opening = 0; opening < 61; opening++) {
+    var openingKey = CROSSING_KEYS[opening];
+    var openParts = openingKey.split(',');
 
-    var gameOld = g.createGame(6);
-    for (var turn = 0; turn < 122; turn++) {
-      if (gameOld.gameOver) break;
-      if (gameOld.turn === 'red') {
-        var unclaimed = g.getUnclaimed(gameOld);
-        var optimal = g.getOptimalRedMoves(gameOld);
-        var move;
-        if (optimal.length > 0 && rng1() < 0.9)
-          move = optimal[Math.floor(rng1() * optimal.length)];
-        else {
-          if (unclaimed.length === 0) break;
-          move = unclaimed[Math.floor(rng1() * unclaimed.length)];
-        }
-        var parts = move.split(',');
-        g.humanMove(gameOld, parseInt(parts[0]), parseInt(parts[1]));
-      } else {
-        var t0 = Date.now();
-        oldMove(gameOld);
-        oldTotalTime += Date.now() - t0;
-        oldTotalMoves++;
-      }
+    for (var variant = 0; variant < NUM_VARIANTS; variant++) {
+      setRedVariant(variant);
+
+      var gameOld = g.createGame(6);
+      g.humanMove(gameOld, parseInt(openParts[0]), parseInt(openParts[1]));
+
+      var t0 = Date.now();
+      playGame(gameOld, oldBlueMove, redMove);
+      oldTotalTime += Date.now() - t0;
+
+      var gameNew = g.createGame(6);
+      g.humanMove(gameNew, parseInt(openParts[0]), parseInt(openParts[1]));
+
+      t0 = Date.now();
+      playGame(gameNew, newBlueMove, redMove);
+      newTotalTime += Date.now() - t0;
+
+      var oldW = gameOld.winner === 'blue';
+      var newW = gameNew.winner === 'blue';
+      if (oldW) oldWins++;
+      if (newW) newWins++;
+      if (oldW && newW) both++;
+      if (!oldW && !newW) neither++;
+      if (oldW && !newW) oldOnly++;
+      if (!oldW && newW) newOnly++;
+      gi++;
+
+      if (gi % 20 === 0)
+        console.log('  ' + gi + '/' + NUM_GAMES + ': old=' + oldWins + ' new=' + newWins + ' oldOnly=' + oldOnly + ' newOnly=' + newOnly);
     }
-
-    var gameNew = g.createGame(6);
-    for (var turn = 0; turn < 122; turn++) {
-      if (gameNew.gameOver) break;
-      if (gameNew.turn === 'red') {
-        var unclaimed = g.getUnclaimed(gameNew);
-        var optimal = g.getOptimalRedMoves(gameNew);
-        var move;
-        if (optimal.length > 0 && rng2() < 0.9)
-          move = optimal[Math.floor(rng2() * optimal.length)];
-        else {
-          if (unclaimed.length === 0) break;
-          move = unclaimed[Math.floor(rng2() * unclaimed.length)];
-        }
-        var parts = move.split(',');
-        g.humanMove(gameNew, parseInt(parts[0]), parseInt(parts[1]));
-      } else {
-        var t0 = Date.now();
-        newMove(gameNew);
-        newTotalTime += Date.now() - t0;
-        newTotalMoves++;
-      }
-    }
-
-    var oldW = gameOld.winner === 'blue';
-    var newW = gameNew.winner === 'blue';
-    if (oldW) oldWins++;
-    if (newW) newWins++;
-    if (oldW && newW) both++;
-    if (!oldW && !newW) neither++;
-    if (oldW && !newW) oldOnly++;
-    if (!oldW && newW) newOnly++;
-
-    if ((gi + 1) % 10 === 0)
-      console.log('  ' + (gi + 1) + '/' + NUM_GAMES + ': old=' + oldWins + ' new=' + newWins + ' oldOnly=' + oldOnly + ' newOnly=' + newOnly);
   }
 
   console.log('');
-  console.log('Old beam WASM:     ' + oldWins + '/' + NUM_GAMES + ' (' + (100 * oldWins / NUM_GAMES).toFixed(1) + '%)');
-  console.log('New beam C:        ' + newWins + '/' + NUM_GAMES + ' (' + (100 * newWins / NUM_GAMES).toFixed(1) + '%)');
+  console.log('Baseline:          ' + oldWins + '/' + NUM_GAMES + ' (' + (100 * oldWins / NUM_GAMES).toFixed(1) + '%)');
+  console.log('New:               ' + newWins + '/' + NUM_GAMES + ' (' + (100 * newWins / NUM_GAMES).toFixed(1) + '%)');
   console.log('Both won:          ' + both);
   console.log('Neither won:       ' + neither);
   console.log('Old only:          ' + oldOnly);
   console.log('New only:          ' + newOnly);
   console.log('Net gain:          ' + (newOnly - oldOnly) + ' games (' + ((newOnly - oldOnly) / NUM_GAMES * 100).toFixed(1) + 'pp)');
   console.log('');
-  console.log('Avg time/move old: ' + (oldTotalTime / oldTotalMoves).toFixed(1) + 'ms');
-  console.log('Avg time/move new: ' + (newTotalTime / newTotalMoves).toFixed(1) + 'ms');
+  console.log('Avg time/game old: ' + (oldTotalTime / (NUM_GAMES / 1000)).toFixed(0) + 'ms');
+  console.log('Avg time/game new: ' + (newTotalTime / (NUM_GAMES / 1000)).toFixed(0) + 'ms');
 
   newMod._free(newBoardPtr);
   newMod._free(newBlueLPtr);
@@ -165,6 +166,9 @@ async function main() {
   oldMod._free(oldBoardPtr);
   oldMod._free(oldBlueLPtr);
   oldMod._free(oldBlueRPtr);
+  oldMod._free(redBoardPtr);
+  oldMod._free(redLPtr);
+  oldMod._free(redRPtr);
 }
 
 main().catch(function(e) { console.error(e); process.exit(1); });

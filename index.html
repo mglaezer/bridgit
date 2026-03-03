@@ -23,10 +23,8 @@
     <div id="strength-row">
       <label for="strengthSelect">Strength</label>
       <select id="strengthSelect">
-        <option value="1">Beginner</option>
         <option value="2">Casual</option>
-        <option value="3">Medium</option>
-        <option value="4" selected>Hard</option>
+        <option value="3" selected>Intermediate</option>
         <option value="5">Expert</option>
       </select>
     </div>
@@ -41,6 +39,7 @@
       <button class="overlay-btn" id="btnR">R</button>
       <button class="overlay-btn" id="btnW">W</button>
     </div>
+    <p id="wasm-fail" style="display:none;color:#e74c3c;font-weight:700">Fast engine failed to load, defaulting to weak play</p>
   </div>
   <script src="game.js"></script>
 </body>

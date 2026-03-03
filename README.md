@@ -75,81 +75,65 @@ Red exploits this by maintaining its *own* partition of crossings into two sets 
 
 ### The Bot's Strategy
 
-Since no winning strategy exists for Blue, the bot can't follow a theoretical formula. Instead, it plays like a strong human — combining positional evaluation with look-ahead search to exploit mistakes:
+Since no winning strategy exists for Blue, the bot can't follow a theoretical formula. Instead, it plays like a strong human — combining positional evaluation with look-ahead search to exploit mistakes. The bot uses three key techniques: electrical resistance evaluation, voltage-based move ordering, and beam-search minimax.
 
-**1. Pairing Repair Detection**
+**1. Electrical Resistance Evaluation**
 
-The bot maintains Blue's own partition (L = spanning tree, R = 2-component forest). After each Red move, it identifies which tree was broken and computes all valid repair edges. Repair candidates get a score bonus scaled by urgency: up to **+2000** when Red is far from winning, tapering to **0** when Red is at distance 1.
+The bot models the board as an electrical circuit. Each player's dot graph becomes a resistor network: unclaimed crossings are 1-ohm resistors, claimed crossings are wires (0 ohms), and opponent-claimed crossings are removed. Boundary dots are merged into supernodes via union-find, then voltages are solved via Gauss-Seidel iteration (15 passes). The total resistance R = 1 / total current from source to sink.
 
-Among repair candidates, some also bridge R's left-right boundary gap — these "gap-bridging" moves push Blue closer to having two spanning trees. These get up to a **+5000 bonus**, also scaled by urgency. This scaling ensures the bot prioritizes offense when Red isn't threatening, and defense when Red is close.
+Lower resistance = stronger position. A player with many parallel paths has low resistance (parallel resistors add up), while a player forced through a single bottleneck has high resistance. This captures all paths simultaneously — something BFS shortest-path evaluation fundamentally cannot do.
 
-**2. Distance-Based Evaluation**
-
-Every unclaimed crossing is scored by: how much it reduces Blue's distance to win (`bd`) and how much it increases Red's sum-of-distances to the bottom boundary (`rdSum`). The formula:
+The position score combines both players' resistances with an asymmetric weighting that values blocking Red 2× more than building Blue's own path:
 
 ```
-score = -bd × 200 + rdSum × 100
+score = red_resistance × 2000 − blue_resistance × 1000
 ```
 
-Lower `bd` = closer to winning for Blue. Higher `rdSum` = Red is further from winning.
+This defensive bias reflects Blue's second-player disadvantage: Blue must block Red's threats before building its own connection. The 2:1 ratio was determined by benchmarking five weight configurations.
 
-To illustrate, here's a small N=2 board after Red claims crossing (1,1) and Blue claims (3,1):
+**2. Voltage-Based Move Ordering**
 
-```
-      c0  c1  c2  c3  c4
+Before searching, the bot computes voltage drops across all empty crossings — once for Blue's network and once for Red's. The voltage drop across a crossing equals the current flowing through it, which directly measures how critical that crossing is as a bottleneck.
 
-r0     ·   R  ═══  R   ·
-r1     B  [R]  B   ×   B       [R] = Red-claimed crossing
-r2     ║   R   ×   R   ║       [B] = Blue-claimed crossing
-r3     B  [B]  B   ×   B
-r4     ·   R  ═══  R   ·
-```
-
-BFS finds each player's shortest path through their dot graph. Owned crossings are free (cost 0); unclaimed crossings cost 1.
+Each candidate move is scored by:
 
 ```
-Blue's path (left → right), bd = 1:
-
-  LEFT ── B ──[B]── B ── × ── B ── RIGHT
-               (3,1)     (3,3)
-              cost 0     cost 1
-
-Red's path (top → bottom), rd = 2:
-
-  TOP ── R ──[R]── R ── × ── R ── × ── R ── BOTTOM
-              (1,1)     (2,2)     (3,3)
-             cost 0    cost 1    cost 1
+move_score = red_voltage_drop × 2000 + blue_voltage_drop × 1000
 ```
 
-Both paths want crossing (3,3) — claiming it helps you and blocks your opponent.
+Crossings with high current in Red's network are critical for Red's connection — Blue should block them. Crossings with high current in Blue's network are critical for Blue — Blue should claim them. Both contribute positively.
 
-**3. Beam-Search Minimax**
+This replaced an earlier approach that evaluated each move by temporarily placing Blue and computing full resistance (requiring ~120 resistance computations per move). Voltage drops achieve the same goal with just 2 computations total, and produce better move ordering because they directly identify bottleneck crossings rather than measuring small resistance changes on a mostly-empty board.
 
-All unclaimed crossings are candidate moves, evaluated through a fixed-depth beam-search minimax. At the highest strength (6-ply, 40×8×10×8):
+**3. Pairing Repair Detection**
 
-- The top 40 Blue candidates are scored by BFS distance + pairing bonuses
-- For each, the top 8 Red responses are tried (ordered by balanced score)
-- Blue picks 10 follow-up moves, Red responds with 8 more — evaluating 25,600 leaves total
-- Leaf positions are evaluated: `−bd × weight + rdSum × 100 + rdMin × 500 − fragility_penalty`
-- After minimax, a `bdBias` correction (`finalScore = minimax − bd × 300`) ensures the bot prefers moves that advance toward winning
+The bot maintains Blue's own partition (L = spanning tree, R = 2-component forest). After each Red move, it identifies which tree was broken and computes all valid repair edges. Repair candidates get a score bonus scaled by urgency: up to **+2000** when Red is far from winning, tapering to **0** when Red is at distance 1. Gap-bridging moves (repairs that also connect R's two components) get up to **+5000**.
 
-Red responses are ordered by a balanced score (`-rd×200 + bd×100`) rather than pure offense. This models realistic human opponents who consider both advancing their own connection and blocking Blue — not just distance-optimal play.
+**4. Beam-Search Minimax**
 
-### Time Constraints
+All unclaimed crossings are candidate moves, evaluated through a 6-ply beam-search minimax. At Expert strength (beam widths 61×20×20×10 + 8×6):
 
-The entire bot runs client-side in your browser — there's no server. The WASM beam-search engine runs 18× faster than the JS fallback, enabling much wider search. The **Strength** dropdown controls search depth and beam width (Beginner through Expert). The JavaScript fallback uses narrower beam widths: 20 × 4 × 6 × 4 = 1,920 leaf evaluations per move (~46ms). Both stay responsive on mobile.
+- All 61 Blue candidates are scored by voltage drops + pairing bonuses
+- For each, the top 20 Red responses are tried (ordered by voltage drops)
+- Blue picks 20 follow-up moves, Red responds with 10 more
+- At plies 5-6, widths narrow to 8×6
+- Leaf positions are evaluated using full resistance computation
+
+The voltage-drop ordering ensures the beam captures the most critical crossings at each level, while the full resistance evaluation at leaves provides accurate position assessment.
 
 ### The Bot's Design Philosophy
 
-Blue is *theoretically lost* — no sequence of Blue moves beats perfect Red. So the bot isn't trying to play "optimally" in the game-theoretic sense. Instead, it's an adversarial optimizer: every move is chosen to maximize the chance that a *human* Red player makes a mistake. The pairing bonuses ensure structural soundness (Blue's partition stays healthy), the distance formula creates offensive pressure, and the beam-search minimax anticipates Red's strongest responses.
+Blue is *theoretically lost* — no sequence of Blue moves beats perfect Red. So the bot isn't trying to play "optimally" in the game-theoretic sense. Instead, it's an adversarial optimizer: every move is chosen to maximize the chance that a *human* Red player makes a mistake. The pairing bonuses ensure structural soundness (Blue's partition stays healthy), the resistance evaluation creates positional pressure, and the beam-search minimax anticipates Red's strongest responses.
 
-The bot is tuned against realistic human-like opponents (a balanced heuristic with noise), not against the mathematically optimal strategy. This matters because real humans consider both offense and defense, make plausible-looking mistakes rather than random ones, and don't know the winning strategy. The bot's Red model reflects this: it anticipates balanced human play, not pure distance-optimal or random moves.
+### Time Budget
+
+The entire bot runs client-side in your browser — there's no server. The WASM beam-search engine handles resistance evaluation, voltage-drop computation, and minimax search in ~20ms per move at Expert level. The **Strength** dropdown controls search depth and beam width (Beginner through Expert).
 
 ## WASM Search Engine
 
-The search engine is written in C and compiled to WebAssembly via Emscripten. It implements the same beam-search minimax as the JS engine but runs **18× faster**, enabling a much wider search (25,600 leaves vs 1,920 at the highest setting). The C code uses precomputed topology tables, static arrays with no heap allocation, and a circular-buffer deque for 0-1 BFS. The compiled output is a ~23KB `.wasm` file plus a ~12KB JS loader — loaded automatically in the browser with a transparent fallback to the JS engine if WebAssembly is unavailable.
+The search engine is written in C and compiled to WebAssembly via Emscripten. It implements beam-search minimax with electrical resistance evaluation and voltage-based move ordering. The C code uses precomputed topology tables, static arrays with no heap allocation, union-find for component merging, and Gauss-Seidel iteration for resistance/voltage computation. The compiled output is a ~28KB `.wasm` file plus a ~12KB JS loader — loaded automatically in the browser with a transparent fallback to the JS engine if WebAssembly is unavailable.
 
-Five difficulty levels control the search width and depth: Beginner (2-ply, narrow beam), Casual (4-ply), Medium (4-ply, wider), Hard (6-ply, 40×8×10×8), and Expert (6-ply, 50×10×12×10). Correctness was verified against the JS engine on 11,476 random board positions — WASM and JS produce identical BFS distances and Red distance info on every one.
+Five difficulty levels control the search width and depth: Beginner (2-ply, narrow beam), Casual (4-ply), Intermediate (6-ply, 61×14×14×8 + 6×4), and Expert (6-ply, 61×20×20×10 + 8×6). At Expert level, the bot evaluates positions in ~20ms per move. Resistance evaluation was benchmarked over 122 games (61 openings × 2 Red variants) against a frozen BFS-based baseline, winning 110/122 (90.2%).
 
 ## Overlays
 
@@ -199,6 +183,14 @@ The new bot wins the most games overall (+9.8pp over the original). It trades a 
 
 The lesson: **benchmark opponents matter as much as the search algorithm.** Optimizing against an unrealistic opponent led to a bot that was over-tuned for a scenario that rarely occurs in practice.
 
+### Generational Evaluation
+
+The first generation of the Blue bot was developed against Shannon pairing — Red's mathematically optimal strategy, played with occasional random mistakes. This is a natural bootstrap: a strong, well-understood opponent that requires no prior bot development.
+
+But Shannon pairing is purely reactive — Red responds to Blue's moves by playing paired crossings, never proactively building attacks. Once the bot learns to exploit random mistakes, further improvements become invisible to this benchmark. Deeper search that defends against cascade attacks, for example, shows no gain against an opponent that never cascades.
+
+To improve beyond the first generation, each new version is evaluated against the **previous generation** playing Red. The bot's own position evaluation — which scores how good a position is for Blue — is inverted: Red picks the move that makes Blue's score worst. This creates an opponent that adapts as the bot improves: it cascades when cascading hurts Blue, blocks when blocking is effective, and tests exactly the threats the current bot is vulnerable to.
+
 ### Human Playtesting
 
 Against `weakRed(0.9)` (Shannon pairing 90%, random 10%), the ~8% loss rate is a hard ceiling — analysis of 20 lost games found 0 were winnable. Red plays near-perfectly in those games (96.9% optimal on average), leaving no exploitable mistakes.
@@ -234,6 +226,9 @@ The bot beats all human-like opponents. Only the proven winning strategy (Shanno
 | **Root-level bd bias + scaled bonuses** | 50% → 0% human win rate | Scale pairing bonuses by Red's distance, add `finalScore = minimax - bd×100` to prefer path-advancing moves when minimax scores are close |
 | **BD-advancer injection** | 5/8 → 8/8 human losses flipped | When pairing bonuses push ALL bd-advancing moves out of the top-20, inject up to 3 back. Fixes the pre-filter bottleneck where the bot never even *considers* the winning move |
 | **Minimax leaf: rdMin + fragility** | 7/10 → 10/10 human losses flipped | `+rdMin×500` catches edge cascades that rdSum misses; `−max(0,bd−5)×300` penalizes fragile positions |
+| **Electrical resistance evaluation** | +22pp | Replaced BFS shortest-path with resistor-network model. Captures all paths simultaneously — parallel paths add up, bottlenecks are penalized. Depth-4 resistance alone (+14pp) beats depth-8 BFS |
+| **Asymmetric resistance weights** (2000/1000) | +2.5pp | Blocking Red weighted 2× vs building Blue's path. Bot was overvaluing far-away path-building moves |
+| **Voltage-based move ordering** | +10.7pp | Per-crossing current flow from Gauss-Seidel solve ranks bottleneck crossings highest. Replaced N×2 resistance scoring with 2 total computations, both faster and more accurate |
 
 ### What Didn't Work
 
@@ -254,12 +249,17 @@ The bot beats all human-like opponents. Only the proven winning strategy (Shanno
 | **Selective deepening** (6-ply on top 5) | **-3.4pp** | Deeper search with stale Red ordering makes bot pessimistic |
 | **Fork detection & trap prevention** (5 variants) | 0pp to **-45pp** | More defense is catastrophically wrong — Blue needs offense |
 | **Fast playouts** (8 variants) | 0pp to **-1.9pp** | Playout's weak Red model always favors offense, wrong against strong opponents |
+| **Deeper d8 with resistance** | **-21pp** | Narrow beams at depth 8 miss good moves, same pattern as BFS |
+| **Wider beams with resistance** ([61,30,30,15]) | **-4pp** | More candidates = more noise, consistent across BFS and resistance |
+| **Bridge/virtual connection detection** | **-1.6pp** | Too many sole connections in early game; bonus adds noise |
+| **Mustplay pruning** (BFS-based) | **-0.9pp** | Voltage drops already identify bottlenecks; BFS mustplay too coarse |
+| **SOR + higher conductance** (omega=1.6, 30 iter) | **-5pp** | Conductance overweighted boundary moves |
 
 All results were validated using **paired testing**: both bots face identical opponent move sequences (via seeded PRNG), eliminating variance. This revealed that most changes previously believed to help had **zero real impact** — earlier unpaired measurements were noise.
 
 ### Neural Network Experiments
 
-**Goal:** Replace the hand-crafted BFS evaluation with a neural network. **Result:** After six training methodologies, the best NN matches the heuristic (~92%) but doesn't surpass it. The evaluation function is not the bottleneck — search depth is.
+**Goal:** Replace the hand-crafted BFS evaluation with a neural network. **Result:** After six training methodologies, the best NN matches the BFS heuristic (~92%) but doesn't surpass it. These experiments predate the electrical resistance evaluation, which ultimately achieved the breakthrough that NNs could not.
 
 All NNs are dense MLPs with ReLU activations. Input: 61 values (one per crossing: 0 = unclaimed, +1 = Red, -1 = Blue). Output: single score from Blue's perspective. The NN replaces the BFS-based evaluation as the leaf evaluator inside the same minimax search. Win rates below are against `weakRed(0.9)`.
 
