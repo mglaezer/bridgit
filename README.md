@@ -121,6 +121,16 @@ All unclaimed crossings are candidate moves, evaluated through a 6-ply beam-sear
 
 The voltage-drop ordering ensures the beam captures the most critical crossings at each level, while the full resistance evaluation at leaves provides accurate position assessment.
 
+**5. First-Move Heuristic: Adjacency Blocking**
+
+The resistance evaluation works well once the board has a few pieces on it, but on Blue's very first move it has a blind spot. On a nearly-empty board, crossings near the edges carry more current in the resistor network — a basic property of how electricity flows near boundaries. This makes edge and corner crossings *look* more important than center crossings, even though center moves are strategically better. The result: without intervention, beam search opens with a corner move that a skilled human can exploit.
+
+This isn't a tuning problem — it's baked into the physics of resistor networks. We tested twelve alternatives (geometric heuristics, deeper search, Monte Carlo playouts, path counting, and more), and every graph-based metric produced edge-biased moves on an empty board. The board is simply too symmetric for any single metric to tell center from edge. One approach — picking the crossing closest to both the board center and Red's opening — produced good-looking center moves but lost 5 extra games in benchmarks: overriding the search engine's tactical judgment with a geometric rule does more harm than good.
+
+The solution is simple and surgical. It only activates on Blue's very first response, leaving beam search in full control for every move after that. Instead of evaluating all 60 empty crossings, it looks at just the 4-6 crossings that are *neighbors* of Red's opening move — crossings that share a connection point (dot) with the one Red just linked. Among those neighbors, it picks the one that does the most damage to Red's path, with a preference for center positions when several are equally good.
+
+This works because neighbors of Red's opening are guaranteed to be near Red's move (not in a far corner), and they're exactly the crossings Red would use next to extend its path — so claiming one directly blocks Red's advance. The center preference ensures that when there's a tie, the bot picks the crossing that blocks Red toward the interior rather than the edge. In benchmarks, this heuristic produces strategic, center-oriented first moves with zero performance regression.
+
 ### The Bot's Design Philosophy
 
 Blue is *theoretically lost* — no sequence of Blue moves beats perfect Red. So the bot isn't trying to play "optimally" in the game-theoretic sense. Instead, it's an adversarial optimizer: every move is chosen to maximize the chance that a *human* Red player makes a mistake. The pairing bonuses ensure structural soundness (Blue's partition stays healthy), the resistance evaluation creates positional pressure, and the beam-search minimax anticipates Red's strongest responses.
@@ -229,6 +239,7 @@ The bot beats all human-like opponents. Only the proven winning strategy (Shanno
 | **Electrical resistance evaluation** | +22pp | Replaced BFS shortest-path with resistor-network model. Captures all paths simultaneously — parallel paths add up, bottlenecks are penalized. Depth-4 resistance alone (+14pp) beats depth-8 BFS |
 | **Asymmetric resistance weights** (2000/1000) | +2.5pp | Blocking Red weighted 2× vs building Blue's path. Bot was overvaluing far-away path-building moves |
 | **Voltage-based move ordering** | +10.7pp | Per-crossing current flow from Gauss-Seidel solve ranks bottleneck crossings highest. Replaced N×2 resistance scoring with 2 total computations, both faster and more accurate |
+| **First-move adjacency blocking** | 0pp (better human play) | On Blue's first move, restrict candidates to crossings adjacent to Red's opening and pick the best blocker. Eliminates boundary-biased corner moves with zero benchmark regression |
 
 ### What Didn't Work
 
@@ -254,6 +265,11 @@ The bot beats all human-like opponents. Only the proven winning strategy (Shanno
 | **Bridge/virtual connection detection** | **-1.6pp** | Too many sole connections in early game; bonus adds noise |
 | **Mustplay pruning** (BFS-based) | **-0.9pp** | Voltage drops already identify bottlenecks; BFS mustplay too coarse |
 | **SOR + higher conductance** (omega=1.6, 30 iter) | **-5pp** | Conductance overweighted boundary moves |
+| **Geometric first-move heuristic** | **-5pp** | Squared-Euclidean distance to center + Red's opening. Picks center moves but overrides beam search's tactical judgment |
+| **Filtered first-move beam search** (top 10-20) | **-6 to -11pp** | Pre-filter candidates by heuristic, then beam search the survivors. Restricting Red's response set too caused the bot to hang; fixing that still regressed |
+| **First-move path counting** (betweenness centrality) | 0pp | Count shortest paths through each crossing in Red's contracted graph. The contracted graph is too uniform — path counts only range 1-2, no differentiation |
+| **First-move Monte Carlo** (200-2000 trials) | Degenerate | Random playouts either too noisy (200) or converge to a single move ignoring Red's position (2000) |
+| **First-move deeper search** (depth 8) | Worse moves, slower | More search depth amplifies boundary bias rather than correcting it |
 
 All results were validated using **paired testing**: both bots face identical opponent move sequences (via seeded PRNG), eliminating variance. This revealed that most changes previously believed to help had **zero real impact** — earlier unpaired measurements were noise.
 

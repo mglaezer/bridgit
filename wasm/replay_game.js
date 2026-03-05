@@ -21,7 +21,7 @@ function partitionToArray(partSet) {
 }
 
 var gameMoves = [
-  {p:"red",m:"4,6"},{p:"blue",m:"1,1"},{p:"red",m:"2,6"},{p:"blue",m:"5,5"},
+  {p:"red",m:"2,6"},{p:"blue",m:"1,1"},{p:"red",m:"4,6"},{p:"blue",m:"5,5"},
   {p:"red",m:"5,7"},{p:"blue",m:"7,7"},{p:"red",m:"7,9"},{p:"blue",m:"9,9"},
   {p:"red",m:"9,11"},{p:"blue",m:"11,11"},{p:"red",m:"10,10"},{p:"blue",m:"11,9"},
   {p:"red",m:"10,8"},{p:"blue",m:"11,7"},{p:"red",m:"10,6"},{p:"blue",m:"11,5"},

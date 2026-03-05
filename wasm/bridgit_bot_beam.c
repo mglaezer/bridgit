@@ -1061,6 +1061,43 @@ int wasm_computer_move(
     if (g_board[i] == EMPTY) unclaimed[numUnclaimed++] = i;
   if (numUnclaimed == 0) return -1;
 
+  /* First-move: among crossings adjacent to Red's opening (sharing a Red
+     dot), play the one that maximizes Red's BFS distance, with center
+     tiebreak */
+  if (numUnclaimed == 60 && g_use_resistance) {
+    int redCi = -1;
+    for (int ci = 0; ci < NUM_CROSSINGS; ci++)
+      if (g_board[ci] == RED) { redCi = ci; break; }
+
+    uint8_t dotA = red_ep[redCi][0], dotB = red_ep[redCi][1];
+
+    int bestIdx = -1;
+    int32_t bestRd = -1;
+    int bestCdist = 9999;
+    for (int i = 0; i < numUnclaimed; i++) {
+      uint8_t ci = unclaimed[i];
+      if (red_ep[ci][0] != dotA && red_ep[ci][1] != dotA &&
+          red_ep[ci][0] != dotB && red_ep[ci][1] != dotB)
+        continue;
+      g_board[ci] = BLUE;
+      int32_t rd = red_distance_to_win(g_board);
+      g_board[ci] = EMPTY;
+      int dr = crossing_rc[ci][0] - (N+1);
+      int dc = crossing_rc[ci][1] - (N+1);
+      int cdist = dr * dr + dc * dc;
+      if (rd > bestRd || (rd == bestRd && cdist < bestCdist)) {
+        bestRd = rd;
+        bestCdist = cdist;
+        bestIdx = ci;
+      }
+    }
+    if (bestIdx < 0) bestIdx = unclaimed[0];
+    g_last_score = 1000;
+    return bestIdx;
+  }
+
+  int origDepth = g_depth;
+
   int redDist = red_distance_to_win(g_board);
 
   float blue_vd[NUM_CROSSINGS], red_vd[NUM_CROSSINGS];
@@ -1078,11 +1115,13 @@ int wasm_computer_move(
     DistInfo rdi = red_dist_info(g_board);
     int32_t bd = blue_distance_to_win(g_board);
     int32_t pw = 0;
-    if (g_use_resistance)
+    if (g_use_resistance) {
       pw = (int32_t)(red_vd[ci] * g_red_w + blue_vd[ci] * g_blue_w);
+    }
     scored[numScored++] = (BlueCandidate){ci, bd, rdi.min, rdi.sum, pw, 0, 0, 0};
     g_board[ci] = EMPTY;
   }
+
 
   /* Step 2: Instant win */
   for (int i = 0; i < numScored; i++)
@@ -1562,7 +1601,8 @@ int wasm_computer_move(
   qsort(scored, blueW0, sizeof(BlueCandidate), cmp_blue_final_desc);
   }
 
-  g_depth = savedDepth;
+  g_depth = origDepth;
+
   g_last_score = scored[0].finalScore;
   return scored[0].idx;
 }
