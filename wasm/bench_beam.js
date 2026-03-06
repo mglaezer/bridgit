@@ -60,14 +60,18 @@ function makeWasmRedMover(mod, boardPtr, redLPtr, redRPtr, redMoveFn) {
 }
 
 function playGame(game, blueMove, redMove) {
+  var moves = [];
   for (var turn = 0; turn < 122; turn++) {
     if (game.gameOver) break;
     if (game.turn === 'red') {
-      redMove(game);
+      var rk = redMove(game);
+      if (rk) moves.push('R:' + rk);
     } else {
-      blueMove(game);
+      var bk = blueMove(game);
+      if (bk) moves.push('B:' + bk);
     }
   }
+  return moves;
 }
 
 async function main() {
@@ -111,6 +115,7 @@ async function main() {
   var newTotalTime = 0, newTotalMoves = 0;
   var oldTotalTime = 0, oldTotalMoves = 0;
   var gi = 0;
+  var lostGames = [];
 
   for (var opening = 0; opening < 61; opening++) {
     var openingKey = CROSSING_KEYS[opening];
@@ -130,7 +135,7 @@ async function main() {
       g.humanMove(gameNew, parseInt(openParts[0]), parseInt(openParts[1]));
 
       t0 = Date.now();
-      playGame(gameNew, newBlueMove, redMove);
+      var newMoves = playGame(gameNew, newBlueMove, redMove);
       newTotalTime += Date.now() - t0;
 
       var oldW = gameOld.winner === 'blue';
@@ -141,6 +146,7 @@ async function main() {
       if (!oldW && !newW) neither++;
       if (oldW && !newW) oldOnly++;
       if (!oldW && newW) newOnly++;
+      if (!newW) lostGames.push({opening: openingKey, variant: variant, moves: newMoves});
       gi++;
 
       if (gi % 20 === 0)
@@ -159,6 +165,16 @@ async function main() {
   console.log('');
   console.log('Avg time/game old: ' + (oldTotalTime / (NUM_GAMES / 1000)).toFixed(0) + 'ms');
   console.log('Avg time/game new: ' + (newTotalTime / (NUM_GAMES / 1000)).toFixed(0) + 'ms');
+
+  if (lostGames.length > 0) {
+    console.log('');
+    console.log('=== Lost games (' + lostGames.length + ') ===');
+    for (var i = 0; i < lostGames.length; i++) {
+      var lg = lostGames[i];
+      console.log('  opening=' + lg.opening + ' var=' + lg.variant +
+        ' moves=' + lg.moves.length + ' | ' + lg.moves.join(' '));
+    }
+  }
 
   newMod._free(newBoardPtr);
   newMod._free(newBlueLPtr);

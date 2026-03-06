@@ -121,7 +121,15 @@ All unclaimed crossings are candidate moves, evaluated through a 6-ply beam-sear
 
 The voltage-drop ordering ensures the beam captures the most critical crossings at each level, while the full resistance evaluation at leaves provides accurate position assessment.
 
-**5. First-Move Heuristic: Adjacency Blocking**
+**5. Adaptive Depth**
+
+In the late game (≤28 unclaimed crossings, above the endgame solver threshold of 14), search depth automatically increases from 6-ply to 8-ply. With fewer unclaimed crossings, beam widths are naturally narrow (capped by the number of remaining moves), making deeper search affordable. This costs ~0.5-1.5s per move instead of ~20ms, acceptable for the last 7-14 moves of a game.
+
+**6. Opening Book**
+
+Blue's second move (when 3 pieces are on the board) uses a precomputed lookup table. For each of 61 possible Red openings and top 10 Red second moves, the best Blue response was computed offline at depth 8 — deeper than the normal 6-ply search. The 610-entry table is embedded in the C code and checked before the main search runs.
+
+**7. First-Move Heuristic: Adjacency Blocking**
 
 The resistance evaluation works well once the board has a few pieces on it, but on Blue's very first move it has a blind spot. On a nearly-empty board, crossings near the edges carry more current in the resistor network — a basic property of how electricity flows near boundaries. This makes edge and corner crossings *look* more important than center crossings, even though center moves are strategically better. The result: without intervention, beam search opens with a corner move that a skilled human can exploit.
 
@@ -143,7 +151,7 @@ The entire bot runs client-side in your browser — there's no server. The WASM 
 
 The search engine is written in C and compiled to WebAssembly via Emscripten. It implements beam-search minimax with electrical resistance evaluation and voltage-based move ordering. The C code uses precomputed topology tables, static arrays with no heap allocation, union-find for component merging, and Gauss-Seidel iteration for resistance/voltage computation. The compiled output is a ~28KB `.wasm` file plus a ~12KB JS loader — loaded automatically in the browser with a transparent fallback to the JS engine if WebAssembly is unavailable.
 
-Five difficulty levels control the search width and depth: Beginner (2-ply, narrow beam), Casual (4-ply), Intermediate (6-ply, 61×14×14×8 + 6×4), and Expert (6-ply, 61×20×20×10 + 8×6). At Expert level, the bot evaluates positions in ~20ms per move. Resistance evaluation was benchmarked over 122 games (61 openings × 2 Red variants) against a frozen BFS-based baseline, winning 110/122 (90.2%).
+Five difficulty levels control the search width and depth: Beginner (2-ply, narrow beam), Casual (4-ply), Intermediate (6-ply, 61×14×14×8 + 6×4), and Expert (6-ply, 61×20×20×10 + 8×6). At Expert level, the bot evaluates positions in ~20ms per move in the opening and midgame. In the late game (≤28 unclaimed crossings), search depth automatically increases from 6-ply to 8-ply, taking ~0.5-1.5s per move. Resistance evaluation was benchmarked over 122 games (61 openings × 2 Red variants) against a frozen BFS-based baseline, winning 110/122 (90.2%).
 
 ## Overlays
 
@@ -240,6 +248,8 @@ The bot beats all human-like opponents. Only the proven winning strategy (Shanno
 | **Asymmetric resistance weights** (2000/1000) | +2.5pp | Blocking Red weighted 2× vs building Blue's path. Bot was overvaluing far-away path-building moves |
 | **Voltage-based move ordering** | +10.7pp | Per-crossing current flow from Gauss-Seidel solve ranks bottleneck crossings highest. Replaced N×2 resistance scoring with 2 total computations, both faster and more accurate |
 | **First-move adjacency blocking** | 0pp (better human play) | On Blue's first move, restrict candidates to crossings adjacent to Red's opening and pick the best blocker. Eliminates boundary-biased corner moves with zero benchmark regression |
+| **Adaptive depth** | +2pp | When ≤28 unclaimed crossings remain (but above the endgame solver threshold of 14), increase search from 6-ply to 8-ply. The narrower branching factor in late game makes deeper search affordable (~0.5-1.5s vs ~20ms) |
+| **Opening book** | +2pp | Precomputed depth-8 responses for Blue's second move (610 entries covering all 61 openings × top 10 Red responses). Generated offline by `wasm/gen_opening_book.js` |
 
 ### What Didn't Work
 
@@ -270,6 +280,8 @@ The bot beats all human-like opponents. Only the proven winning strategy (Shanno
 | **First-move path counting** (betweenness centrality) | 0pp | Count shortest paths through each crossing in Red's contracted graph. The contracted graph is too uniform — path counts only range 1-2, no differentiation |
 | **First-move Monte Carlo** (200-2000 trials) | Degenerate | Random playouts either too noisy (200) or converge to a single move ignoring Red's position (2000) |
 | **First-move deeper search** (depth 8) | Worse moves, slower | More search depth amplifies boundary bias rather than correcting it |
+| **Phase-dependent weights** | 0-1pp | Vary red_w/blue_w by game phase (1500/1000 early, 2500/800 late). Ablation showed ≤1 game difference — within noise |
+| **Human-predictive Red model** | 0pp | Add path-advancing bonus to Red's move ordering to simulate human play. Ablation showed zero contribution |
 
 All results were validated using **paired testing**: both bots face identical opponent move sequences (via seeded PRNG), eliminating variance. This revealed that most changes previously believed to help had **zero real impact** — earlier unpaired measurements were noise.
 

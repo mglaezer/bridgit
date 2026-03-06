@@ -1045,6 +1045,10 @@ static int exact_solve(int is_blue_turn, int alpha, int beta) {
   }
 }
 
+/* ── Opening book (move 2) ── */
+
+#include "opening_book.h"
+
 /* ── Main entry point ── */
 
 __attribute__((used))
@@ -1096,7 +1100,31 @@ int wasm_computer_move(
     return bestIdx;
   }
 
+#ifdef OPENING_BOOK_SIZE
+  if (numUnclaimed == 58 && g_use_resistance) {
+    int red1 = -1, red2 = -1;
+    for (int i = 0; i < NUM_CROSSINGS; i++) {
+      if (g_board[i] == RED) {
+        if (red1 < 0) red1 = i; else red2 = i;
+      }
+    }
+    if (red1 >= 0 && red2 >= 0) {
+      for (int i = 0; i < OPENING_BOOK_SIZE; i++) {
+        if ((opening_book[i][0] == red1 && opening_book[i][1] == red2) ||
+            (opening_book[i][0] == red2 && opening_book[i][1] == red1)) {
+          g_last_score = 1000;
+          return opening_book[i][2];
+        }
+      }
+    }
+  }
+#endif
+
   int origDepth = g_depth;
+
+  if (g_use_resistance && g_depth == 6 && numUnclaimed <= 28 && numUnclaimed > ENDGAME_THRESHOLD) {
+    g_depth = 8;
+  }
 
   int redDist = red_distance_to_win(g_board);
 
@@ -1125,7 +1153,7 @@ int wasm_computer_move(
 
   /* Step 2: Instant win */
   for (int i = 0; i < numScored; i++)
-    if (scored[i].bd == 0) { g_last_score = 999999; return scored[i].idx; }
+    if (scored[i].bd == 0) { g_depth = origDepth; g_last_score = 999999; return scored[i].idx; }
 
   /* Step 2a: Endgame exact solver */
   if (numUnclaimed <= ENDGAME_THRESHOLD) {
@@ -1152,7 +1180,7 @@ int wasm_computer_move(
       if (eg_bd[i] == 0) v = 1;
       else v = exact_solve(0, -1, 1);
       g_board[eg_moves[i]] = EMPTY;
-      if (v == 1) { g_last_score = 999999; return eg_moves[i]; }
+      if (v == 1) { g_depth = origDepth; g_last_score = 999999; return eg_moves[i]; }
     }
   }
 
@@ -1167,6 +1195,7 @@ int wasm_computer_move(
         bestSi = i;
       }
     }
+    g_depth = origDepth;
     g_last_score = bestScore;
     return scored[bestSi].idx;
   }
@@ -1602,7 +1631,6 @@ int wasm_computer_move(
   }
 
   g_depth = origDepth;
-
   g_last_score = scored[0].finalScore;
   return scored[0].idx;
 }
