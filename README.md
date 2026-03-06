@@ -113,12 +113,29 @@ Three debug overlays show Red's game-theoretic strategy. Toggle with **L**, **R*
 
 ## Development
 
-Built over 50+ experiments. Key lessons:
+Built over 50+ experiments across several generations. Most ideas made things worse.
 
-- **Benchmark opponents matter as much as the algorithm.** Optimizing against Shannon pairing (perfect play + random mistakes) led to over-tuning. Switching to realistic opponents (balanced heuristic with noise) revealed the bot's real weaknesses and unlocked +17pp.
-- **Resistance > BFS.** Electrical resistance captures all parallel paths simultaneously. Depth-4 resistance beats depth-8 BFS (+22pp).
-- **Most ideas regress.** Wider beams, deeper search with narrow beams, Monte Carlo rollouts, expectimax, alpha-beta, neural networks (6 methodologies up to 92.2% — still below resistance), phase-dependent weights, human-predictive Red models — all tested, all either hurt or contributed nothing measurable. Every change was validated by ablation.
+### Evolution
+
+The bot started with BFS shortest-path evaluation and 1-ply search. Early gains came from adding pairing repair bonuses (+31pp), then deepening to 4-ply minimax (+5pp) and widening the beam (20 Blue candidates instead of 12). A tournament against realistic opponents — greedy attackers, balanced players, balanced players with noise — revealed the bot was over-tuned for Shannon pairing and weak against human-like play. Widening Red's response model and modeling Red as a balanced player (not pure attacker) added +17pp against realistic opponents.
+
+Human playtesting exposed a different problem: the bot over-defended against threats humans never make. Scaling repair bonuses by urgency and injecting path-advancing moves back into the candidate pool when pairing bonuses pushed them out fixed all recorded human losses.
+
+The biggest single improvement was switching from BFS to electrical resistance evaluation (+22pp). Depth-4 resistance beats depth-8 BFS because it captures all parallel paths simultaneously. Voltage-based move ordering added another +10pp by identifying bottleneck crossings with just 2 computations instead of ~120.
+
+Late-game adaptive depth (+2pp) and a precomputed opening book (+2pp) were the final additions, both validated by ablation testing.
+
+### What didn't work
+
+Wider beams (more noise), deeper search with narrow beams (missed good moves), Monte Carlo rollouts (too noisy), expectimax (weakened defenses), alpha-beta pruning (incompatible with beam-search score adjustments), fork detection (Blue needs offense, not more defense), bridge/virtual connection bonuses (too noisy in early game), mustplay pruning (voltage drops already do this), SOR with higher conductance (boundary-biased), phase-dependent evaluation weights (≤1 game difference in ablation), human-predictive Red move ordering (zero contribution in ablation).
+
+Six neural network training methodologies (game outcomes, TD self-play, supervised distillation, expert iteration, AlphaZero-style self-play) peaked at 92.2% with a 6K-parameter MLP — still below resistance evaluation. The NN experiments predate the resistance breakthrough.
+
+### Key lessons
+
+- **Benchmark opponents matter as much as the algorithm.** Optimizing against an unrealistic opponent led to over-tuning for a scenario that rarely occurs.
 - **Paired testing is essential.** Both bots face identical opponent sequences, eliminating variance. Many changes that appeared to help were actually noise.
+- **Ablation over accumulation.** Testing improvements together hides which ones actually contribute. Removing one at a time revealed that 2 of 4 changes in the latest batch did nothing.
 
 ## References
 
