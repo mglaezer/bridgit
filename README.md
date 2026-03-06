@@ -135,7 +135,6 @@ Six neural network training methodologies (game outcomes, TD self-play, supervis
 
 - **Benchmark opponents matter as much as the algorithm.** Optimizing against an unrealistic opponent led to over-tuning for a scenario that rarely occurs.
 - **Paired testing is essential.** Both bots face identical opponent sequences, eliminating variance. Many changes that appeared to help were actually noise.
-- **Ablation over accumulation.** Testing improvements together hides which ones actually contribute. Removing one at a time revealed that 2 of 4 changes in the latest batch did nothing.
 
 ## References
 
