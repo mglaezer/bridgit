@@ -1317,7 +1317,7 @@ var wasmStrengthPresets = [
   { depth: 4, base: [61, 10, 10, 6], extra: [4, 3] },
   { depth: 6, base: [61, 14, 14, 8], extra: [6, 4] },
   null,
-  { depth: 6, base: [61, 20, 20, 10], extra: [8, 6] }
+  { depth: 6, base: [61, 20, 18, 12], extra: [8, 6] }
 ];
 
 function applyWasmStrength(level) {

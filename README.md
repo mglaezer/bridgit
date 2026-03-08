@@ -47,7 +47,7 @@ The 2:1 defensive bias reflects Blue's second-player disadvantage.
 
 **2. Voltage-Based Move Ordering**
 
-Voltage drops across crossings measure current flow — how critical each crossing is as a bottleneck. This ranks all candidate moves with just 2 resistance computations (one per player), replacing per-move evaluation that required ~120 computations.
+Voltage drops across crossings measure current flow — how critical each crossing is as a bottleneck. This ranks all candidate moves at plies 0 and 2 with just 2 resistance computations (one per player), replacing per-move evaluation that required ~120 computations.
 
 **3. Pairing Repair Detection**
 
@@ -55,7 +55,7 @@ The bot maintains Blue's partition (L = spanning tree, R = 2-component forest). 
 
 **4. Beam-Search Minimax**
 
-6-ply beam search at Expert strength (widths 61×20×20×10 + 8×6). All candidates are scored by voltage drops + repair bonuses, then the top moves are searched with full resistance evaluation at leaf nodes.
+6-ply beam search at Expert strength (widths 61×20×18×12 + 8×6). All candidates are scored by voltage drops + repair bonuses, then the top moves are searched with full resistance evaluation at leaf nodes.
 
 **5. Adaptive Depth**
 
@@ -123,7 +123,7 @@ Human playtesting exposed a different problem: the bot over-defended against thr
 
 The biggest single improvement was switching from BFS to electrical resistance evaluation (+22pp). Depth-4 resistance beats depth-8 BFS because it captures all parallel paths simultaneously. Voltage-based move ordering added another +10pp by identifying bottleneck crossings with just 2 computations instead of ~120.
 
-Late-game adaptive depth (+2pp) and a precomputed opening book (+2pp) were the final additions, both validated by ablation testing.
+Late-game adaptive depth (+2pp) and a precomputed opening book (+2pp) were followed by voltage-based ordering at ply 2 with retuned beam widths (+8pp) — better ordering at ply 2 allowed narrowing the Blue beam while widening Red's response beam for better defensive awareness.
 
 ### What didn't work
 

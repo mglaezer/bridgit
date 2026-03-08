@@ -1407,7 +1407,10 @@ int wasm_computer_move(
             numFollow++;
           }
         }
-        qsort(blueFollow, numFollow, sizeof(BlueCandidate), cmp_blue_by_bd);
+        if (g_use_resistance)
+          qsort(blueFollow, numFollow, sizeof(BlueCandidate), cmp_blue_desc);
+        else
+          qsort(blueFollow, numFollow, sizeof(BlueCandidate), cmp_blue_by_bd);
 
         int blueTop2N = numFollow < blueW2 ? numFollow : blueW2;
         for (int m = 0; m < blueTop2N; m++) {
