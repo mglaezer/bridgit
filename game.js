@@ -1314,8 +1314,8 @@ if (typeof module !== 'undefined') {
 var wasmStrengthPresets = [
   null,
   null,
-  { depth: 4, base: [61, 10, 10, 6], extra: [4, 3] },
-  { depth: 6, base: [61, 14, 14, 8], extra: [6, 4] },
+  { depth: 2, base: [61, 3, 2, 2], extra: [2, 2] },
+  { depth: 2, base: [61, 8, 6, 4], extra: [3, 2] },
   null,
   { depth: 6, base: [61, 20, 18, 12], extra: [8, 6] }
 ];
