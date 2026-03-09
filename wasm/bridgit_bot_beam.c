@@ -464,12 +464,27 @@ static float blue_resistance(const uint8_t *board) {
   if (src == snk) return 0.0f;
 
   uint8_t ea[NUM_CROSSINGS], eb[NUM_CROSSINGS];
+  float ec[NUM_CROSSINGS];
   int ne = 0;
   for (int ci = 0; ci < NUM_CROSSINGS; ci++) {
     if (board[ci] != EMPTY) continue;
     uint8_t ra = res_find(par, blue_ep[ci][0]);
     uint8_t rb = res_find(par, blue_ep[ci][1]);
-    if (ra != rb) { ea[ne] = ra; eb[ne] = rb; ne++; }
+    if (ra != rb) {
+      ea[ne] = ra; eb[ne] = rb;
+      int friendly = 0;
+      uint8_t da = blue_ep[ci][0], db = blue_ep[ci][1];
+      for (int a = 0; a < blue_adj_count[da]; a++) {
+        uint8_t adj_ci = blue_adj_crossing[da][a];
+        if (adj_ci != 255 && adj_ci != ci && board[adj_ci] == BLUE) { friendly++; break; }
+      }
+      for (int a = 0; a < blue_adj_count[db]; a++) {
+        uint8_t adj_ci = blue_adj_crossing[db][a];
+        if (adj_ci != 255 && adj_ci != ci && board[adj_ci] == BLUE) { friendly++; break; }
+      }
+      ec[ne] = 0.5f + 0.25f * friendly;
+      ne++;
+    }
   }
   if (ne == 0) return MAX_RESISTANCE;
 
@@ -494,8 +509,8 @@ static float blue_resistance(const uint8_t *board) {
       if (r == src || r == snk) continue;
       float sum_cv = 0.0f, sum_c = 0.0f;
       for (int e = 0; e < ne; e++) {
-        if (ea[e] == r) { sum_cv += v[eb[e]]; sum_c += 1.0f; }
-        else if (eb[e] == r) { sum_cv += v[ea[e]]; sum_c += 1.0f; }
+        if (ea[e] == r) { sum_cv += v[eb[e]] * ec[e]; sum_c += ec[e]; }
+        else if (eb[e] == r) { sum_cv += v[ea[e]] * ec[e]; sum_c += ec[e]; }
       }
       if (sum_c > 0.0f) v[r] = sum_cv / sum_c;
     }
@@ -503,8 +518,8 @@ static float blue_resistance(const uint8_t *board) {
 
   float current = 0.0f;
   for (int e = 0; e < ne; e++) {
-    if (ea[e] == src) current += v[src] - v[eb[e]];
-    else if (eb[e] == src) current += v[src] - v[ea[e]];
+    if (ea[e] == src) current += ec[e] * (v[src] - v[eb[e]]);
+    else if (eb[e] == src) current += ec[e] * (v[src] - v[ea[e]]);
   }
 
   if (current < 0.001f) return MAX_RESISTANCE;
@@ -526,12 +541,27 @@ static float red_resistance(const uint8_t *board) {
   if (src == snk) return 0.0f;
 
   uint8_t ea[NUM_CROSSINGS], eb[NUM_CROSSINGS];
+  float ec[NUM_CROSSINGS];
   int ne = 0;
   for (int ci = 0; ci < NUM_CROSSINGS; ci++) {
     if (board[ci] != EMPTY) continue;
     uint8_t ra = res_find(par, red_ep[ci][0]);
     uint8_t rb = res_find(par, red_ep[ci][1]);
-    if (ra != rb) { ea[ne] = ra; eb[ne] = rb; ne++; }
+    if (ra != rb) {
+      ea[ne] = ra; eb[ne] = rb;
+      int friendly = 0;
+      uint8_t da = red_ep[ci][0], db = red_ep[ci][1];
+      for (int a = 0; a < red_adj_count[da]; a++) {
+        uint8_t adj_ci = red_adj_crossing[da][a];
+        if (adj_ci != 255 && adj_ci != ci && board[adj_ci] == RED) { friendly++; break; }
+      }
+      for (int a = 0; a < red_adj_count[db]; a++) {
+        uint8_t adj_ci = red_adj_crossing[db][a];
+        if (adj_ci != 255 && adj_ci != ci && board[adj_ci] == RED) { friendly++; break; }
+      }
+      ec[ne] = 0.5f + 0.25f * friendly;
+      ne++;
+    }
   }
   if (ne == 0) return MAX_RESISTANCE;
 
@@ -556,8 +586,8 @@ static float red_resistance(const uint8_t *board) {
       if (r == src || r == snk) continue;
       float sum_cv = 0.0f, sum_c = 0.0f;
       for (int e = 0; e < ne; e++) {
-        if (ea[e] == r) { sum_cv += v[eb[e]]; sum_c += 1.0f; }
-        else if (eb[e] == r) { sum_cv += v[ea[e]]; sum_c += 1.0f; }
+        if (ea[e] == r) { sum_cv += v[eb[e]] * ec[e]; sum_c += ec[e]; }
+        else if (eb[e] == r) { sum_cv += v[ea[e]] * ec[e]; sum_c += ec[e]; }
       }
       if (sum_c > 0.0f) v[r] = sum_cv / sum_c;
     }
@@ -565,8 +595,8 @@ static float red_resistance(const uint8_t *board) {
 
   float current = 0.0f;
   for (int e = 0; e < ne; e++) {
-    if (ea[e] == src) current += v[src] - v[eb[e]];
-    else if (eb[e] == src) current += v[src] - v[ea[e]];
+    if (ea[e] == src) current += ec[e] * (v[src] - v[eb[e]]);
+    else if (eb[e] == src) current += ec[e] * (v[src] - v[ea[e]]);
   }
 
   if (current < 0.001f) return MAX_RESISTANCE;

@@ -1,8 +1,8 @@
 # Blue Bot Improvement Strategy
 
-## Current: 108/122 (88.5%) — up from 98/122 (80.3%)
+## Current: 112/122 (91.8%) — up from 98/122 (80.3%)
 
-Active techniques: electrical resistance evaluation, voltage-based move ordering (now used at ply 2), pairing repair detection, beam-search minimax (6-ply, widths 61×20×18×12 + 8×6), adaptive depth (8-ply when ≤28 unclaimed), opening book (610 entries for move 2), first-move adjacency blocking, endgame exact solver (≤14 unclaimed).
+Active techniques: electrical resistance evaluation with variable conductance, voltage-based move ordering (plies 0 and 2), pairing repair detection, beam-search minimax (6-ply, widths 61×20×18×12 + 8×6), adaptive depth (8-ply when ≤28 unclaimed), opening book (610 entries for move 2), first-move adjacency blocking, endgame exact solver (≤14 unclaimed).
 
 ## Changes Made
 
@@ -15,6 +15,11 @@ Expert widths changed from `[61, 20, 20, 10]` to `[61, 20, 18, 12]`:
 - Ply-3 Red beam: 10 → 12 (wider — Blue now considers more Red threats, defending better)
 
 These changes are synergistic: better ply-2 ordering makes narrowing safe, and the freed compute budget allows widening ply-3 Red responses.
+
+### 3. Variable conductance (code change)
+Instead of uniform 1Ω resistors for all unclaimed crossings, conductance now varies based on friendly neighbor count. For each empty crossing, count how many of its two endpoints connect to already-claimed friendly crossings (0, 1, or 2). Conductance = `0.5 + 0.25 * friendly_count`, ranging from 0.5Ω (isolated) to 1.0Ω (well-connected). Applied to both `blue_resistance` and `red_resistance`.
+
+This gives the resistance model more positional awareness: crossings near your own territory are "easier" to claim and carry more current, while isolated crossings are harder to exploit.
 
 ## Full Beam Width Exploration Results
 
@@ -55,6 +60,24 @@ Why Red ordering regressed: the endgame solver assumes perfect Red play. Since B
 | Dynamic Red width | 91/122 | 74.6% | -7 |
 | SOR + voltage ply-2 combo | 98/122 | 80.3% | 0 |
 
+### Round 3: New ideas (paired benchmarks against 108/122 baseline)
+| Experiment | Delta | Notes |
+|---|---|---|
+| Transposition table (endgame solver) | 0 | Speeds up solver but doesn't change outcomes |
+| History heuristic | -5 | Accumulated bias corrupts voltage ordering |
+| Late-move reductions | -2 | Reduced-depth eval misses important ply-2 candidates |
+| **Variable conductance (0.5–1.0)** | **+4** | Assign conductance based on friendly neighbor count |
+| Iterative deepening (4→6 ply) | 0 | Voltage ordering already near-optimal for reordering |
+| Threat-space search (dual threats) | 0 | bd==1 dual threats too rare to change outcomes |
+
+### Variable conductance tuning
+| Variant | Conductance range | Delta |
+|---|---|---|
+| **Both players, 0.5–1.0** | **base=0.5, scale=0.25** | **+4** |
+| Blue-only, 0.5–1.0 | Only blue_resistance modified | -2 |
+| Both players, 0.3–1.0 (wider) | base=0.3, scale=0.35 | -2 |
+| Both players, 0.7–1.0 (narrower) | base=0.7, scale=0.15 | -14 |
+
 ## Research Findings (from agent team)
 
 ### Connection game literature
@@ -68,8 +91,6 @@ Why Red ordering regressed: the endgame solver assumes perfect Red play. Since B
 - Endgame solver is only useful when Blue CAN win (rare since Blue is theoretically lost)
 - Wider search introduces noise; better ordering is more valuable than more candidates
 
-## Remaining Ideas (diminishing returns expected)
-1. **Transposition table** — cache resistance evaluations to avoid redundant computation
-2. **History heuristic** — track tactically important crossings across positions
-3. **VC-augmented resistance** — add virtual edges for bridge patterns (Wolve's key innovation)
-4. **Extend opening book to move 3** — ~6,100 entries, covers early midgame
+## Remaining Ideas
+1. **VC-augmented resistance** — add virtual edges for bridge patterns (Wolve's key innovation)
+2. **Extend opening book to move 3** — ~6,100 entries, covers early midgame

@@ -37,7 +37,7 @@ The bot combines seven techniques. Each was validated by ablation testing over 1
 
 **1. Electrical Resistance Evaluation**
 
-The board is modeled as a resistor network: unclaimed crossings are 1Ω resistors, claimed crossings are wires, opponent crossings are removed. Voltages are solved via Gauss-Seidel iteration. Lower resistance = stronger position, capturing all parallel paths simultaneously — something BFS shortest-path cannot do.
+The board is modeled as a resistor network: unclaimed crossings are resistors with variable conductance (0.5–1.0 based on friendly neighbor count), claimed crossings are wires, opponent crossings are removed. Voltages are solved via Gauss-Seidel iteration. Lower resistance = stronger position, capturing all parallel paths simultaneously — something BFS shortest-path cannot do.
 
 ```
 score = red_resistance × 2000 − blue_resistance × 1000
@@ -123,11 +123,11 @@ Human playtesting exposed a different problem: the bot over-defended against thr
 
 The biggest single improvement was switching from BFS to electrical resistance evaluation (+22pp). Depth-4 resistance beats depth-8 BFS because it captures all parallel paths simultaneously. Voltage-based move ordering added another +10pp by identifying bottleneck crossings with just 2 computations instead of ~120.
 
-Late-game adaptive depth (+2pp) and a precomputed opening book (+2pp) were followed by voltage-based ordering at ply 2 with retuned beam widths (+8pp) — better ordering at ply 2 allowed narrowing the Blue beam while widening Red's response beam for better defensive awareness.
+Late-game adaptive depth (+2pp) and a precomputed opening book (+2pp) were followed by voltage-based ordering at ply 2 with retuned beam widths (+8pp) — better ordering at ply 2 allowed narrowing the Blue beam while widening Red's response beam for better defensive awareness. Variable conductance (+3pp) replaced uniform resistors with neighbor-aware weights, giving the resistance model more positional awareness.
 
 ### What didn't work
 
-Wider beams (more noise), deeper search with narrow beams (missed good moves), Monte Carlo rollouts (too noisy), expectimax (weakened defenses), alpha-beta pruning (incompatible with beam-search score adjustments), fork detection (Blue needs offense, not more defense), bridge/virtual connection bonuses (too noisy in early game), mustplay pruning (voltage drops already do this), SOR with higher conductance (boundary-biased), phase-dependent evaluation weights (≤1 game difference in ablation), human-predictive Red move ordering (zero contribution in ablation).
+Wider beams (more noise), deeper search with narrow beams (missed good moves), Monte Carlo rollouts (too noisy), expectimax (weakened defenses), alpha-beta pruning (incompatible with beam-search score adjustments), fork detection (Blue needs offense, not more defense), bridge/virtual connection bonuses (too noisy in early game), mustplay pruning (voltage drops already do this), SOR with higher conductance (boundary-biased), phase-dependent evaluation weights (≤1 game difference in ablation), human-predictive Red move ordering (zero contribution in ablation), transposition tables in endgame solver (no outcome change), history heuristic (corrupts voltage ordering), late-move reductions (misses important candidates), iterative deepening (voltage ordering already near-optimal), threat-space search (dual threats too rare).
 
 Six neural network training methodologies (game outcomes, TD self-play, supervised distillation, expert iteration, AlphaZero-style self-play) peaked at 92.2% with a 6K-parameter MLP — still below resistance evaluation. The NN experiments predate the resistance breakthrough.
 
