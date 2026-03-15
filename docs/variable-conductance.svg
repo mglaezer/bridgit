@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 130" width="540" height="130">
+  <style>
+    .lab { font-family: 'SF Mono', 'Cascadia Code', Consolas, monospace; }
+  </style>
+  <rect x="0" y="0" width="540" height="130" rx="8" fill="#faf8f5"/>
+
+  <!-- Example 1: 0 friendly -->
+  <rect x="10" y="10" width="160" height="110" rx="6" fill="#ffffff" stroke="#e5e2de" stroke-width="1"/>
+  <circle cx="44" cy="50" r="12" fill="#2563eb" opacity="0.15" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="44" y="54" class="lab" font-size="8" fill="#2563eb" text-anchor="middle">A</text>
+  <circle cx="136" cy="50" r="12" fill="#2563eb" opacity="0.15" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="136" y="54" class="lab" font-size="8" fill="#2563eb" text-anchor="middle">B</text>
+  <path d="M56,50 l6,-8 l12,16 l12,-16 l12,16 l12,-16 l12,16 l6,-8" fill="none" stroke="#b45309" stroke-width="1.5"/>
+  <text x="90" y="32" class="lab" font-size="9" fill="#b45309" text-anchor="middle" font-weight="600">?</text>
+  <text x="44" y="78" class="lab" font-size="7" fill="#78716c" text-anchor="middle">isolated</text>
+  <text x="136" y="78" class="lab" font-size="7" fill="#78716c" text-anchor="middle">isolated</text>
+  <text x="90" y="98" class="lab" font-size="9" fill="#78716c" text-anchor="middle">friendly = 0</text>
+  <text x="90" y="112" class="lab" font-size="13" fill="#b45309" text-anchor="middle" font-weight="600">G = 0.50</text>
+
+  <!-- Example 2: 1 friendly -->
+  <rect x="190" y="10" width="160" height="110" rx="6" fill="#ffffff" stroke="#e5e2de" stroke-width="1"/>
+  <circle cx="224" cy="50" r="12" fill="#2563eb" opacity="0.15" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="224" y="54" class="lab" font-size="8" fill="#2563eb" text-anchor="middle">A</text>
+  <circle cx="316" cy="50" r="12" fill="#2563eb" opacity="0.15" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="316" y="54" class="lab" font-size="8" fill="#2563eb" text-anchor="middle">B</text>
+  <path d="M236,50 l6,-8 l12,16 l12,-16 l12,16 l12,-16 l12,16 l6,-8" fill="none" stroke="#b45309" stroke-width="1.5"/>
+  <text x="270" y="32" class="lab" font-size="9" fill="#b45309" text-anchor="middle" font-weight="600">?</text>
+  <circle cx="224" cy="20" r="6" fill="#2563eb" opacity="0.3" stroke="#2563eb" stroke-width="1"/>
+  <line x1="224" y1="26" x2="224" y2="38" stroke="#16a34a" stroke-width="2"/>
+  <text x="238" y="24" class="lab" font-size="6" fill="#16a34a">claimed</text>
+  <text x="316" y="78" class="lab" font-size="7" fill="#78716c" text-anchor="middle">isolated</text>
+  <text x="270" y="98" class="lab" font-size="9" fill="#78716c" text-anchor="middle">friendly = 1</text>
+  <text x="270" y="112" class="lab" font-size="13" fill="#b45309" text-anchor="middle" font-weight="600">G = 0.75</text>
+
+  <!-- Example 3: 2 friendly -->
+  <rect x="370" y="10" width="160" height="110" rx="6" fill="#ffffff" stroke="#e5e2de" stroke-width="1"/>
+  <circle cx="404" cy="50" r="12" fill="#2563eb" opacity="0.15" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="404" y="54" class="lab" font-size="8" fill="#2563eb" text-anchor="middle">A</text>
+  <circle cx="496" cy="50" r="12" fill="#2563eb" opacity="0.15" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="496" y="54" class="lab" font-size="8" fill="#2563eb" text-anchor="middle">B</text>
+  <path d="M416,50 l6,-8 l12,16 l12,-16 l12,16 l12,-16 l12,16 l6,-8" fill="none" stroke="#b45309" stroke-width="1.5"/>
+  <text x="450" y="32" class="lab" font-size="9" fill="#b45309" text-anchor="middle" font-weight="600">?</text>
+  <circle cx="404" cy="20" r="6" fill="#2563eb" opacity="0.3" stroke="#2563eb" stroke-width="1"/>
+  <line x1="404" y1="26" x2="404" y2="38" stroke="#16a34a" stroke-width="2"/>
+  <text x="418" y="24" class="lab" font-size="6" fill="#16a34a">claimed</text>
+  <circle cx="496" cy="80" r="6" fill="#2563eb" opacity="0.3" stroke="#2563eb" stroke-width="1"/>
+  <line x1="496" y1="74" x2="496" y2="62" stroke="#16a34a" stroke-width="2"/>
+  <text x="510" y="84" class="lab" font-size="6" fill="#16a34a">claimed</text>
+  <text x="450" y="98" class="lab" font-size="9" fill="#78716c" text-anchor="middle">friendly = 2</text>
+  <text x="450" y="112" class="lab" font-size="13" fill="#b45309" text-anchor="middle" font-weight="600">G = 1.00</text>
+</svg>

@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 300" width="720" height="300">
+  <style>
+    .lab { font-family: 'SF Mono', 'Cascadia Code', Consolas, monospace; }
+    .bod { font-family: system-ui, -apple-system, sans-serif; }
+  </style>
+  <rect x="0" y="0" width="720" height="300" rx="8" fill="#faf8f5"/>
+
+  <!-- Source rail -->
+  <rect x="20" y="20" width="4" height="260" rx="2" fill="#d97706"/>
+  <text x="12" y="14" class="lab" font-size="11" fill="#d97706" font-weight="600" text-anchor="middle">1V</text>
+
+  <!-- Sink rail -->
+  <rect x="696" y="20" width="4" height="260" rx="2" fill="#0f766e"/>
+  <text x="698" y="14" class="lab" font-size="11" fill="#0f766e" font-weight="600" text-anchor="middle">0V</text>
+
+  <!-- Row 1 -->
+  <line x1="24" y1="70" x2="80" y2="70" stroke="#16a34a" stroke-width="2.5"/>
+  <circle cx="80" cy="70" r="14" fill="#2563eb" opacity="0.15" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="80" y="74" class="lab" font-size="9" fill="#2563eb" text-anchor="middle" font-weight="500">B0</text>
+  <line x1="94" y1="70" x2="226" y2="70" stroke="#16a34a" stroke-width="2.5"/>
+  <text x="160" y="60" class="lab" font-size="8" fill="#16a34a" text-anchor="middle">wire (claimed)</text>
+  <circle cx="240" cy="70" r="14" fill="#2563eb" opacity="0.15" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="240" y="74" class="lab" font-size="9" fill="#2563eb" text-anchor="middle" font-weight="500">B1</text>
+  <line x1="254" y1="70" x2="290" y2="70" stroke="#a8a29e" stroke-width="1.5"/>
+  <path d="M290,70 l8,-10 l16,20 l16,-20 l16,20 l16,-20 l16,20 l8,-10" fill="none" stroke="#b45309" stroke-width="1.5"/>
+  <line x1="386" y1="70" x2="420" y2="70" stroke="#a8a29e" stroke-width="1.5"/>
+  <text x="338" y="52" class="lab" font-size="8" fill="#b45309" text-anchor="middle" font-weight="500">G=0.75</text>
+  <circle cx="420" cy="70" r="14" fill="#2563eb" opacity="0.15" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="420" y="74" class="lab" font-size="9" fill="#2563eb" text-anchor="middle" font-weight="500">B2</text>
+  <line x1="434" y1="70" x2="470" y2="70" stroke="#a8a29e" stroke-width="1.5"/>
+  <path d="M470,70 l8,-10 l16,20 l16,-20 l16,20 l16,-20 l16,20 l8,-10" fill="none" stroke="#b45309" stroke-width="1.5"/>
+  <line x1="566" y1="70" x2="586" y2="70" stroke="#a8a29e" stroke-width="1.5"/>
+  <text x="518" y="52" class="lab" font-size="8" fill="#b45309" text-anchor="middle" font-weight="500">G=0.50</text>
+  <circle cx="600" cy="70" r="14" fill="#2563eb" opacity="0.15" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="600" y="74" class="lab" font-size="9" fill="#2563eb" text-anchor="middle" font-weight="500">B3</text>
+  <line x1="614" y1="70" x2="696" y2="70" stroke="#16a34a" stroke-width="2.5"/>
+
+  <!-- Row 2 -->
+  <line x1="24" y1="150" x2="80" y2="150" stroke="#16a34a" stroke-width="2.5"/>
+  <circle cx="80" cy="150" r="14" fill="#2563eb" opacity="0.15" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="80" y="154" class="lab" font-size="9" fill="#2563eb" text-anchor="middle" font-weight="500">B4</text>
+  <line x1="94" y1="150" x2="130" y2="150" stroke="#a8a29e" stroke-width="1.5"/>
+  <path d="M130,150 l8,-10 l16,20 l16,-20 l16,20 l16,-20 l16,20 l8,-10" fill="none" stroke="#b45309" stroke-width="1.5"/>
+  <text x="178" y="132" class="lab" font-size="8" fill="#b45309" text-anchor="middle" font-weight="500">G=0.50</text>
+  <circle cx="240" cy="150" r="14" fill="#2563eb" opacity="0.15" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="240" y="154" class="lab" font-size="9" fill="#2563eb" text-anchor="middle" font-weight="500">B5</text>
+  <line x1="254" y1="150" x2="406" y2="150" stroke="#dc2626" stroke-width="1" stroke-dasharray="6,4" opacity="0.5"/>
+  <text x="330" y="142" class="lab" font-size="8" fill="#dc2626" text-anchor="middle" opacity="0.8">blocked (opponent)</text>
+  <text x="330" y="164" class="lab" font-size="18" fill="#dc2626" text-anchor="middle" opacity="0.5">&#215;</text>
+  <circle cx="420" cy="150" r="14" fill="#2563eb" opacity="0.15" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="420" y="154" class="lab" font-size="9" fill="#2563eb" text-anchor="middle" font-weight="500">B6</text>
+  <line x1="434" y1="150" x2="470" y2="150" stroke="#a8a29e" stroke-width="1.5"/>
+  <path d="M470,150 l8,-10 l16,20 l16,-20 l16,20 l16,-20 l16,20 l8,-10" fill="none" stroke="#b45309" stroke-width="1.5"/>
+  <line x1="566" y1="150" x2="586" y2="150" stroke="#a8a29e" stroke-width="1.5"/>
+  <text x="518" y="132" class="lab" font-size="8" fill="#b45309" text-anchor="middle" font-weight="500">G=1.00</text>
+  <circle cx="600" cy="150" r="14" fill="#2563eb" opacity="0.15" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="600" y="154" class="lab" font-size="9" fill="#2563eb" text-anchor="middle" font-weight="500">B7</text>
+  <line x1="614" y1="150" x2="696" y2="150" stroke="#16a34a" stroke-width="2.5"/>
+
+  <!-- Row 3 -->
+  <line x1="24" y1="230" x2="80" y2="230" stroke="#16a34a" stroke-width="2.5"/>
+  <circle cx="80" cy="230" r="14" fill="#2563eb" opacity="0.15" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="80" y="234" class="lab" font-size="9" fill="#2563eb" text-anchor="middle" font-weight="500">B8</text>
+  <line x1="94" y1="230" x2="130" y2="230" stroke="#a8a29e" stroke-width="1.5"/>
+  <path d="M130,230 l8,-10 l16,20 l16,-20 l16,20 l16,-20 l16,20 l8,-10" fill="none" stroke="#b45309" stroke-width="1.5"/>
+  <text x="178" y="212" class="lab" font-size="8" fill="#b45309" text-anchor="middle" font-weight="500">G=0.75</text>
+  <circle cx="240" cy="230" r="14" fill="#2563eb" opacity="0.15" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="240" y="234" class="lab" font-size="9" fill="#2563eb" text-anchor="middle" font-weight="500">B9</text>
+  <line x1="254" y1="230" x2="290" y2="230" stroke="#a8a29e" stroke-width="1.5"/>
+  <path d="M290,230 l8,-10 l16,20 l16,-20 l16,20 l16,-20 l16,20 l8,-10" fill="none" stroke="#b45309" stroke-width="1.5"/>
+  <line x1="386" y1="230" x2="406" y2="230" stroke="#a8a29e" stroke-width="1.5"/>
+  <text x="338" y="212" class="lab" font-size="8" fill="#b45309" text-anchor="middle" font-weight="500">G=0.50</text>
+  <circle cx="420" cy="230" r="14" fill="#2563eb" opacity="0.15" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="420" y="234" class="lab" font-size="9" fill="#2563eb" text-anchor="middle" font-weight="500">B10</text>
+  <line x1="434" y1="230" x2="470" y2="230" stroke="#a8a29e" stroke-width="1.5"/>
+  <path d="M470,230 l8,-10 l16,20 l16,-20 l16,20 l16,-20 l16,20 l8,-10" fill="none" stroke="#b45309" stroke-width="1.5"/>
+  <line x1="566" y1="230" x2="586" y2="230" stroke="#a8a29e" stroke-width="1.5"/>
+  <text x="518" y="212" class="lab" font-size="8" fill="#b45309" text-anchor="middle" font-weight="500">G=0.50</text>
+  <circle cx="600" cy="230" r="14" fill="#2563eb" opacity="0.15" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="600" y="234" class="lab" font-size="9" fill="#2563eb" text-anchor="middle" font-weight="500">B11</text>
+  <line x1="614" y1="230" x2="696" y2="230" stroke="#16a34a" stroke-width="2.5"/>
+
+  <!-- Vertical connections -->
+  <line x1="600" y1="84" x2="600" y2="136" stroke="#16a34a" stroke-width="2"/>
+  <line x1="420" y1="164" x2="420" y2="216" stroke="#16a34a" stroke-width="2"/>
+  <line x1="80" y1="84" x2="80" y2="136" stroke="#a8a29e" stroke-width="1" stroke-dasharray="3,3"/>
+  <line x1="240" y1="84" x2="240" y2="136" stroke="#a8a29e" stroke-width="1" stroke-dasharray="3,3"/>
+  <line x1="420" y1="84" x2="420" y2="136" stroke="#a8a29e" stroke-width="1" stroke-dasharray="3,3"/>
+  <line x1="80" y1="164" x2="80" y2="216" stroke="#a8a29e" stroke-width="1" stroke-dasharray="3,3"/>
+  <line x1="240" y1="164" x2="240" y2="216" stroke="#a8a29e" stroke-width="1" stroke-dasharray="3,3"/>
+  <line x1="600" y1="164" x2="600" y2="216" stroke="#a8a29e" stroke-width="1" stroke-dasharray="3,3"/>
+
+  <!-- Legend -->
+  <g transform="translate(60, 286)">
+    <line x1="0" y1="0" x2="20" y2="0" stroke="#16a34a" stroke-width="2.5"/>
+    <text x="24" y="4" class="lab" font-size="8" fill="#78716c">wire (claimed / boundary)</text>
+    <line x1="180" y1="0" x2="200" y2="0" stroke="#dc2626" stroke-width="1" stroke-dasharray="4,3" opacity="0.6"/>
+    <text x="204" y="4" class="lab" font-size="8" fill="#78716c">blocked (opponent)</text>
+    <path d="M360,0 l4,-5 l8,10 l8,-10 l8,10 l4,-5" fill="none" stroke="#b45309" stroke-width="1.2"/>
+    <text x="396" y="4" class="lab" font-size="8" fill="#78716c">resistor (unclaimed, conductance G)</text>
+  </g>
+</svg>

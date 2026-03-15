@@ -1,4 +1,4 @@
-# Bridg-It
+# Bridg-It (test edit)
 
 A browser-based implementation of [Bridg-It](https://en.wikipedia.org/wiki/Bridg-It), a classic connection board game from the 1960s, featuring a bot opponent powered by beam-search minimax with electrical resistance evaluation.
 
@@ -33,21 +33,42 @@ The bot plays Blue — the losing side. There is no winning theorem to follow, s
 
 ## The Bot's Strategy
 
-The bot combines seven techniques. Each was validated by ablation testing over 122 games (61 openings × 2 Red variants).
+The bot combines seven techniques, scoring **112/122 wins (91.8%)** in paired testing. Each technique was validated by ablation testing over 122 games: 61 different Red opening moves × 2 Red strategy variants (greedy attacker and balanced player). Both bots face identical opponent move sequences, eliminating variance — if a change doesn't improve the win count, it's noise. The Red opponent plays a mix of aggressive shortest-path moves and balanced heuristic-driven moves, modeling realistic human play.
 
 **1. Electrical Resistance Evaluation**
 
-The board is modeled as a resistor network: unclaimed crossings are resistors with variable conductance (0.5–1.0 based on friendly neighbor count), claimed crossings are wires, opponent crossings are removed. Voltages are solved via Gauss-Seidel iteration. Lower resistance = stronger position, capturing all parallel paths simultaneously — something BFS shortest-path cannot do.
+The board is modeled as a resistor network. Each player's dots become nodes; unclaimed crossings become resistors connecting their two endpoint dots, with variable conductance (0.5–1.0) based on how many endpoint dots have a friendly claimed neighbor. Claimed friendly crossings become wires (zero resistance), and opponent crossings are removed from the network. Boundary edges are fixed at 1V (source) and 0V (sink).
+
+<img src="docs/circuit-analogy.svg" alt="Board modeled as resistor network" width="720">
+
+Voltages are solved via 15 iterations of Gauss-Seidel relaxation (each node's voltage = weighted average of its neighbors' voltages). Total current from the source gives resistance: R = 1/I. Lower resistance = stronger position, because it means more parallel paths to win — something BFS shortest-path cannot capture.
+
+The conductance of each resistor depends on the local board state — crossings near your territory carry more current:
+
+<img src="docs/variable-conductance.svg" alt="Variable conductance: G = 0.5 + 0.25 × friendly_count" width="540">
 
 ```
-score = red_resistance × 2000 − blue_resistance × 1000
+conductance = 0.5 + 0.25 × friendly_count    // 0, 1, or 2 friendly neighbors
+leaf_score  = red_resistance × 2000 − blue_resistance × 1000
 ```
 
-The 2:1 defensive bias reflects Blue's second-player disadvantage.
+The 2:1 weighting reflects Blue's second-player disadvantage. Blue maximizes this score (wants Red's resistance high), Red minimizes it.
+
+**Why resistance beats BFS.** BFS finds the shortest path but is blind to parallel alternatives. Resistance captures *all* paths simultaneously through Kirchhoff's laws — three independent 4-step paths (R≈1.0Ω) is far stronger than one 3-step path (R=3.0Ω), because the opponent must cut all three to disconnect you. Switching from BFS to resistance: **+22pp**.
+
+<img src="docs/bfs-vs-resistance.svg" alt="BFS sees 1 path; resistance sees all parallel paths" width="520">
 
 **2. Voltage-Based Move Ordering**
 
-Voltage drops across crossings measure current flow — how critical each crossing is as a bottleneck. This ranks all candidate moves at plies 0 and 2 with just 2 resistance computations (one per player), replacing per-move evaluation that required ~120 computations.
+Before searching, the voltage network is solved once per player using unit conductances. The voltage drop across each crossing — |V[endpoint_A] − V[endpoint_B]| — measures how much current flows through it. High voltage drop = critical bottleneck. This ranks all candidate moves at plies 0 and 2 with just 2 resistance computations (one per player), replacing per-move evaluation that required ~120 computations.
+
+<img src="docs/voltage-drops.svg" alt="Crossings ranked by voltage drop" width="480">
+
+```
+candidate_score = red_voltage_drop × 2000 + blue_voltage_drop × 1000
+```
+
+A crossing critical to Red (high red_vdrop) is worth claiming to slow Red down. A crossing critical to Blue (high blue_vdrop) advances Blue's own path. This ordering: **+10pp**.
 
 **3. Pairing Repair Detection**
 
