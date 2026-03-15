@@ -33,7 +33,7 @@ The bot plays Blue — the losing side. There is no winning theorem to follow, s
 
 ## The Bot's Strategy
 
-The bot combines seven techniques, scoring **112/122 wins (91.8%)** in paired testing. Each technique was validated by ablation testing over 122 games: 61 different Red opening moves × 2 Red strategy variants (greedy attacker and balanced player). Both bots face identical opponent move sequences, eliminating variance — if a change doesn't improve the win count, it's noise. The Red opponent plays a mix of aggressive shortest-path moves and balanced heuristic-driven moves, modeling realistic human play.
+The bot combines seven techniques, scoring **112/122 wins (91.8%)** against its own Red engine in paired testing. The Red opponent is the bot's own `wasm_computer_move_red` — a 2-ply minimax player using BFS distances, partition repair, and Red-perspective evaluation. Each technique was validated by ablation testing over 122 games: 61 different Red opening moves × 2 Red variants (variant 0 picks the top-scoring move; variant 1 picks among near-best moves within 50 points, adding variety). Both bots face identical opponent sequences per game, eliminating variance.
 
 **1. Electrical Resistance Evaluation**
 
