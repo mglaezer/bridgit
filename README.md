@@ -124,7 +124,7 @@ r12    ·   R  ═══  R  ═══  R  ═══  R  ═══  R  ═══
 
 ## Overlays
 
-Three debug overlays show Red's game-theoretic strategy. Toggle with **L**, **R**, **W** buttons or keys **1**, **2**, **3**.
+Three debug overlays visualize the optimal Red strategy derived from Lehman's theorem. These show the mathematically perfect moves that guarantee Red wins — you can use them to verify that Red always wins with correct play, or to learn the winning strategy yourself. Toggle with **L**, **R**, **W** buttons or keys **1**, **2**, **3**.
 
 | Button | What it shows |
 |--------|---------------|
